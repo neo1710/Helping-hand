@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { AVATAR_CONFIGS } from './Avatar';
+import Avatar, { AVATAR_CONFIGS, AvatarConfig } from './Avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiAward, FiLock, FiCheckCircle } from 'react-icons/fi';
 
@@ -15,7 +15,17 @@ interface JourneyMapProps {
   target: number;
   unit: string;
   checkpoints: number;
-  avatarIndex: number;
+  avatarIndex?: number;
+  avatarConfig?: AvatarConfig;
+  customAvatar?: {
+    name?: string;
+    tone?: string;
+    skin?: string;
+    hairStyle?: string;
+    hairColor?: string;
+    accessory?: string;
+    expression?: string;
+  };
   goalName: string;
   rewards?: CheckpointRewardItem[];
 }
@@ -82,10 +92,23 @@ export default function GoalJourneyMap({
   target,
   unit,
   checkpoints,
-  avatarIndex,
+  avatarIndex = 0,
+  avatarConfig,
+  customAvatar,
   rewards = [],
 }: JourneyMapProps) {
-  const av = AVATAR_CONFIGS[avatarIndex] ?? AVATAR_CONFIGS[0];
+  // Use custom companion if defined, otherwise preset config
+  const av = customAvatar?.skin || customAvatar?.tone
+    ? {
+        name: customAvatar.name || 'Hero',
+        tone: customAvatar.tone || '#3b82f6',
+        skin: customAvatar.skin || '#f0c4a0',
+        hairStyle: customAvatar.hairStyle || 'short',
+        hairColor: customAvatar.hairColor || '#2b2118',
+        accessory: customAvatar.accessory || 'none',
+        expression: customAvatar.expression || 'happy',
+      }
+    : avatarConfig || (AVATAR_CONFIGS[avatarIndex] ?? AVATAR_CONFIGS[0]);
 
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLen, setPathLen] = useState(1500);
@@ -403,18 +426,12 @@ export default function GoalJourneyMap({
                     borderRadius: '50%',
                     overflow: 'hidden',
                     background: '#1b212b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  <svg viewBox="0 0 48 48" style={{ width: '100%', height: '100%', display: 'block' }}>
-                    <rect width="48" height="48" fill="#1b212b" />
-                    <path d="M8 50 C8 37 15 31.5 24 31.5 C33 31.5 40 37 40 50 Z" fill={av.tone} />
-                    <circle cx="24" cy="20" r="8.5" fill={av.skin} />
-                    <path d={HAIR[av.hairStyle] ?? HAIR.short} fill={av.hairColor} />
-                    <ellipse cx="21" cy="20" rx="1.4" ry="1.7" fill="#1a1a2e" />
-                    <ellipse cx="27" cy="20" rx="1.4" ry="1.7" fill="#1a1a2e" />
-                    <circle cx="21.5" cy="19.3" r="0.5" fill="white" />
-                    <circle cx="27.5" cy="19.3" r="0.5" fill="white" />
-                  </svg>
+                  <Avatar config={av} size={48} />
                 </div>
               </div>
             </div>

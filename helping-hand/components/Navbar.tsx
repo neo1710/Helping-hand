@@ -15,6 +15,7 @@ import {
   FiMenu,
   FiX,
   FiArrowRight,
+  FiSmile,
 } from 'react-icons/fi';
 import { HiHandRaised } from 'react-icons/hi2';
 import ThemeToggle from './ThemeToggle';
@@ -40,6 +41,7 @@ export default function Navbar() {
   const navLinks = [
     { href: '/goals', label: 'Goals' },
     { href: '/goals/new', label: 'New Goal' },
+    { href: '/avatar', label: '3D Avatar' },
     { href: '/notifications', label: 'Notifications', badge: pendingCount },
     { href: '/profile', label: 'Profile' },
     { href: '/#features', label: 'Features' },
@@ -49,6 +51,7 @@ export default function Navbar() {
   const mobileNavItems = [
     { href: '/goals', label: 'All Goals', icon: FiTarget },
     { href: '/goals/new', label: 'Create New Goal', icon: FiPlusCircle },
+    { href: '/avatar', label: '3D Avatar Studio', icon: FiSmile },
     { href: '/notifications', label: 'Notifications', icon: FiBell, badge: pendingCount },
     { href: '/profile', label: 'Profile & Settings', icon: FiUser },
     { href: '/#features', label: 'Features', icon: FiCompass },

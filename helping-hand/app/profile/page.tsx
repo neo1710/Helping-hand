@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FiTarget, FiAward, FiMail, FiArrowLeft, FiCheck, FiUser } from 'react-icons/fi';
+import { FiTarget, FiAward, FiMail, FiArrowLeft, FiCheck, FiUser, FiSmile } from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
 
 interface UserProfile {
@@ -488,6 +488,27 @@ export default function ProfilePage() {
                     </p>
                   )}
                 </div>
+
+                <Link
+                  href="/avatar"
+                  style={{
+                    marginLeft: 'auto',
+                    padding: '8px 14px',
+                    borderRadius: 12,
+                    background: 'var(--brand-soft)',
+                    border: '1.5px solid var(--brand)',
+                    color: 'var(--brand)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <FiSmile />
+                  <span>3D Avatar Studio</span>
+                </Link>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--line)' }} />

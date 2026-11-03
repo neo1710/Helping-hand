@@ -1,5 +1,17 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface ICustomAvatar {
+  name: string;
+  tone: string;
+  skin: string;
+  hairStyle: string;
+  hairColor: string;
+  eyesColor?: string;
+  clothingStyle?: string;
+  accessory?: string;
+  expression?: string;
+}
+
 export interface IUser extends Document {
   auth0Id: string;
   username: string;
@@ -7,6 +19,7 @@ export interface IUser extends Document {
   email: string;
   picture: string;
   bio: string;
+  customAvatar?: ICustomAvatar;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +62,17 @@ const UserSchema = new Schema<IUser>(
       type: String,
       default: '',
       maxlength: 280,
+    },
+    customAvatar: {
+      name: { type: String, default: 'My Hero' },
+      tone: { type: String, default: '#3b82f6' },
+      skin: { type: String, default: '#f0c4a0' },
+      hairStyle: { type: String, default: 'short' },
+      hairColor: { type: String, default: '#2b2118' },
+      eyesColor: { type: String, default: '#1a1a2e' },
+      clothingStyle: { type: String, default: 'hoodie' },
+      accessory: { type: String, default: 'none' },
+      expression: { type: String, default: 'happy' },
     },
   },
   { timestamps: true }

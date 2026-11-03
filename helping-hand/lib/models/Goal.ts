@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import { ICustomAvatar } from './User';
 
 export interface ILogEntry {
   _id?: Types.ObjectId;
@@ -26,8 +27,9 @@ export interface IGoalMember {
   avatarIndex?: number;
   avatarTone?: string;
   avatarSkin?: string;
-  avatarHair?: 'short' | 'long' | 'bun' | 'curly';
+  avatarHair?: string;
   avatarHairColor?: string;
+  customAvatar?: ICustomAvatar;
   log: ILogEntry[];
 }
 
@@ -49,8 +51,9 @@ export interface IGoal extends Document {
   avatarIndex: number;
   avatarTone: string;
   avatarSkin: string;
-  avatarHair: 'short' | 'long' | 'bun' | 'curly';
+  avatarHair: string;
   avatarHairColor: string;
+  customAvatar?: ICustomAvatar;
   progress: number;            // For personal/collaborative total progress
   log: ILogEntry[];
   members: IGoalMember[];
@@ -79,6 +82,21 @@ const CheckpointRewardSchema = new Schema<ICheckpointReward>(
   { _id: false }
 );
 
+const CustomAvatarSchema = new Schema(
+  {
+    name: { type: String, default: 'My Hero' },
+    tone: { type: String, default: '#3b82f6' },
+    skin: { type: String, default: '#f0c4a0' },
+    hairStyle: { type: String, default: 'short' },
+    hairColor: { type: String, default: '#2b2118' },
+    eyesColor: { type: String, default: '#1a1a2e' },
+    clothingStyle: { type: String, default: 'hoodie' },
+    accessory: { type: String, default: 'none' },
+    expression: { type: String, default: 'happy' },
+  },
+  { _id: false }
+);
+
 const GoalMemberSchema = new Schema<IGoalMember>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -90,8 +108,9 @@ const GoalMemberSchema = new Schema<IGoalMember>(
     avatarIndex: { type: Number, default: 0 },
     avatarTone: { type: String, default: '#3b82f6' },
     avatarSkin: { type: String, default: '#f0c4a0' },
-    avatarHair: { type: String, enum: ['short', 'long', 'bun', 'curly'], default: 'short' },
+    avatarHair: { type: String, default: 'short' },
     avatarHairColor: { type: String, default: '#2b2118' },
+    customAvatar: { type: CustomAvatarSchema },
     log: { type: [LogEntrySchema], default: [] },
   },
   { _id: true }
@@ -116,11 +135,12 @@ const GoalSchema = new Schema<IGoal>(
     endDate: { type: Date, required: true },
     checkpoints: { type: Number, min: 2, max: 20, default: 4 },
     rewards: { type: [CheckpointRewardSchema], default: [] },
-    avatarIndex: { type: Number, min: 0, max: 5, default: 0 },
+    avatarIndex: { type: Number, default: 0 },
     avatarTone: { type: String, default: '#3b82f6' },
     avatarSkin: { type: String, default: '#f0c4a0' },
-    avatarHair: { type: String, enum: ['short', 'long', 'bun', 'curly'], default: 'short' },
+    avatarHair: { type: String, default: 'short' },
     avatarHairColor: { type: String, default: '#2b2118' },
+    customAvatar: { type: CustomAvatarSchema },
     progress: { type: Number, default: 0, min: 0 },
     log: { type: [LogEntrySchema], default: [] },
     members: { type: [GoalMemberSchema], default: [] },

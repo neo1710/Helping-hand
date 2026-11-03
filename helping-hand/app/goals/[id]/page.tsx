@@ -71,6 +71,18 @@ interface Goal {
   progress: number;
   avatarIndex: number;
   avatarTone: string;
+  avatarSkin?: string;
+  avatarHair?: string;
+  avatarHairColor?: string;
+  customAvatar?: {
+    name?: string;
+    tone?: string;
+    skin?: string;
+    hairStyle?: string;
+    hairColor?: string;
+    accessory?: string;
+    expression?: string;
+  };
   status: 'active' | 'completed' | 'abandoned';
   checkpoints: number;
   rewards: CheckpointRewardItem[];
@@ -739,6 +751,7 @@ function GoalJourneyContent() {
             unit={goal.unit}
             checkpoints={numCheckpoints}
             avatarIndex={goal.avatarIndex}
+            customAvatar={goal.customAvatar}
             goalName={goal.name}
             rewards={goal.rewards || []}
           />

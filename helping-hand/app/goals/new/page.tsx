@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
-import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
+import Avatar, { AVATAR_CONFIGS, AvatarConfig } from '@/components/Avatar';
 
 const UNITS = ['km', 'hours', 'books', 'sessions', '₹', 'steps', 'pages', 'reps', 'kg'];
 
@@ -93,9 +93,31 @@ export default function NewGoalPage() {
     avatarIndex: 0,
   });
 
+  const [customAvatar, setCustomAvatar] = useState<AvatarConfig | null>(null);
+  const [avatarChoiceType, setAvatarChoiceType] = useState<'custom' | 'preset'>('preset');
+
   const [rewards, setRewards] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Fetch custom avatar if created
+  useEffect(() => {
+    async function loadUserAvatar() {
+      try {
+        const res = await fetch('/api/user/avatar');
+        const data = await res.json();
+        if (res.ok && data.customAvatar) {
+          setCustomAvatar(data.customAvatar);
+          if (data.hasCustomAvatar) {
+            setAvatarChoiceType('custom');
+          }
+        }
+      } catch (e) {
+        console.warn('Error loading custom avatar:', e);
+      }
+    }
+    loadUserAvatar();
+  }, []);
 
   useEffect(() => {
     const today = new Date();
@@ -180,7 +202,8 @@ export default function NewGoalPage() {
 
     setLoading(true);
     try {
-      const av = AVATAR_CONFIGS[form.avatarIndex];
+      const isCustom = avatarChoiceType === 'custom' && customAvatar;
+      const av = isCustom ? customAvatar : AVATAR_CONFIGS[form.avatarIndex];
       const res = await fetch('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,11 +220,12 @@ export default function NewGoalPage() {
             checkpointIndex: idx + 1,
             reward: r.trim() || `Milestone ${idx + 1} Reward!`,
           })),
-          avatarIndex: form.avatarIndex,
+          avatarIndex: isCustom ? 0 : form.avatarIndex,
           avatarTone: av.tone,
           avatarSkin: av.skin,
           avatarHair: av.hairStyle,
           avatarHairColor: av.hairColor,
+          customAvatar: isCustom ? customAvatar : undefined,
         }),
       });
 
@@ -832,22 +856,107 @@ export default function NewGoalPage() {
 
           {/* 4. Avatar Selection */}
           <div className="form-card">
-            <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16, marginBottom: 2 }}>
-              4. Pick Your Journey Avatar
-            </h2>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, marginBottom: 14 }}>
-              Swipe or tap to choose the avatar that travels your roadmap.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+              <div>
+                <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16, margin: 0 }}>
+                  4. Pick Your Journey Avatar
+                </h2>
+                <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, margin: '2px 0 0' }}>
+                  Choose your hero companion to travel your goal roadmap pin.
+                </p>
+              </div>
+
+              {/* 3D Custom Studio Link */}
+              <Link
+                href="/avatar"
+                style={{
+                  color: 'var(--brand)',
+                  textDecoration: 'none',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '6px 12px',
+                  borderRadius: 20,
+                  background: 'var(--brand-soft)',
+                  border: '1px solid var(--brand)',
+                }}
+              >
+                <HiSparkles style={{ fontSize: 14 }} />
+                <span>3D Avatar Studio</span>
+              </Link>
+            </div>
 
             <div className="avatar-carousel">
+              {/* My Custom Avatar Card (if loaded) */}
+              {customAvatar && (
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setAvatarChoiceType('custom')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                    padding: '10px 10px',
+                    borderRadius: 14,
+                    border: `2px solid ${avatarChoiceType === 'custom' ? 'var(--brand)' : 'var(--line)'}`,
+                    background: avatarChoiceType === 'custom' ? 'var(--brand-soft)' : 'var(--bg)',
+                    flexShrink: 0,
+                    minWidth: 92,
+                    position: 'relative',
+                  }}
+                >
+                  <div style={{ position: 'relative' }}>
+                    <Avatar config={customAvatar} size={50} glow={avatarChoiceType === 'custom'} />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        background: 'var(--brand)',
+                        color: '#fff',
+                        fontSize: 9,
+                        fontWeight: 900,
+                        padding: '1px 5px',
+                        borderRadius: 8,
+                      }}
+                    >
+                      3D
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: avatarChoiceType === 'custom' ? 'var(--brand)' : 'var(--ink)',
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 86,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {customAvatar.name || 'My Hero'}
+                  </span>
+                </motion.div>
+              )}
+
+              {/* 6 Pre-made Avatar Options */}
               {AVATAR_CONFIGS.map((cfg, idx) => {
-                const isSelected = form.avatarIndex === idx;
+                const isSelected = avatarChoiceType === 'preset' && form.avatarIndex === idx;
                 return (
                   <motion.div
                     key={cfg.name}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setForm(f => ({ ...f, avatarIndex: idx }))}
+                    onClick={() => {
+                      setAvatarChoiceType('preset');
+                      setForm(f => ({ ...f, avatarIndex: idx }));
+                    }}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
