@@ -39,8 +39,9 @@ export default function Navbar() {
         {/* Desktop Nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="hidden-mobile">
           {[
-            { href: '/goals', label: 'My Goals' },
+            { href: '/goals', label: 'Goals' },
             { href: '/goals/new', label: 'New Goal' },
+            { href: '/profile', label: 'Profile' },
             { href: '/#features', label: 'Features' },
             { href: '/#how-it-works', label: 'How It Works' },
           ].map(({ href, label }) => (
@@ -77,7 +78,17 @@ export default function Navbar() {
           {/* Auth0 User profile or Login button */}
           {!isLoading && user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Link
+                href="/profile"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                }}
+                title="View & Edit Profile"
+              >
                 {user.picture ? (
                   <img
                     src={user.picture}
@@ -108,10 +119,10 @@ export default function Navbar() {
                     {(user.name || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="hidden-mobile" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-muted)' }}>
+                <span className="hidden-mobile" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
                   {user.name || user.email}
                 </span>
-              </div>
+              </Link>
 
               <a
                 href="/auth/logout"
@@ -227,8 +238,9 @@ export default function Navbar() {
             }}
           >
             {[
-              { href: '/goals', label: 'My Goals' },
+              { href: '/goals', label: 'Goals' },
               { href: '/goals/new', label: 'Set New Goal' },
+              { href: '/profile', label: 'Profile & Settings' },
               { href: '/#features', label: 'Features' },
               { href: '/#how-it-works', label: 'How It Works' },
             ].map(({ href, label }) => (

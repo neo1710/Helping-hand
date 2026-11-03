@@ -1,6 +1,13 @@
 'use client';
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { AVATAR_CONFIGS } from './Avatar';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export interface CheckpointRewardItem {
+  checkpointIndex: number;
+  milestoneValue?: number;
+  reward: string;
+}
 
 interface JourneyMapProps {
   progress: number;   // 0–100 (percentage)
@@ -9,6 +16,7 @@ interface JourneyMapProps {
   checkpoints: number;
   avatarIndex: number;
   goalName: string;
+  rewards?: CheckpointRewardItem[];
 }
 
 // ─── Road definition ────────────────────────────────────────────────────────
@@ -51,7 +59,8 @@ const ARC = buildArcTable();
 
 /** Return {x, y} for fraction f ∈ [0,1] using arc-length parameterisation */
 function posAt(f: number): { x: number; y: number } {
-  const target = f * ARC.total;
+  const clampedF = Math.min(1, Math.max(0, f));
+  const target = clampedF * ARC.total;
   let lo = 0, hi = ARC.pts.length - 1;
   while (lo < hi - 1) {
     const mid = (lo + hi) >> 1;
@@ -72,13 +81,23 @@ const STARS = Array.from({ length: 55 }, (_, i) => ({
 }));
 
 export default function GoalJourneyMap({
-  progress, target, unit, checkpoints, avatarIndex,
+  progress,
+  target,
+  unit,
+  checkpoints,
+  avatarIndex,
+  rewards = [],
 }: JourneyMapProps) {
   const av = AVATAR_CONFIGS[avatarIndex] ?? AVATAR_CONFIGS[0];
 
-  // SVG path ref → read real total length for dash math
   const pathRef = useRef<SVGPathElement>(null);
-  const [pathLen, setPathLen] = useState(1500); // fallback
+  const [pathLen, setPathLen] = useState(1500);
+  const [activeModalReward, setActiveModalReward] = useState<{
+    index: number;
+    value: number;
+    reward: string;
+    reached: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (pathRef.current) {
@@ -96,12 +115,16 @@ export default function GoalJourneyMap({
   // Trail dash
   const trailDash = `${fraction * pathLen} ${pathLen}`;
 
-  // Checkpoint fractions
+  // Checkpoint fractions (4 to 20 checkpoints distributed smoothly along road)
+  const numCheckpoints = Math.min(20, Math.max(2, checkpoints || 4));
   const cpFractions = useMemo(() => {
     const cps: number[] = [];
-    for (let i = 1; i <= checkpoints; i++) cps.push(i / (checkpoints + 1));
+    for (let i = 1; i <= numCheckpoints; i++) {
+      // Scale fractions so the last checkpoint is close to but before 100% flag
+      cps.push((i / (numCheckpoints + 0.25)));
+    }
     return cps;
-  }, [checkpoints]);
+  }, [numCheckpoints]);
 
   const HAIR: Record<string, string> = {
     short: 'M15.4 19.5 C15.2 12.4 19.4 9.6 24 9.6 C29.2 9.6 32.8 12.6 32.6 18.6 C30.2 15.6 26.4 14.6 22.2 15.2 C19 15.6 16.9 17.2 15.4 19.5 Z',
@@ -110,8 +133,6 @@ export default function GoalJourneyMap({
     curly: 'M15 20.5 C13 15 16 9 21 9.6 C23 7.4 28 7.8 30 10.6 C34 11.6 34.6 16.6 33 20.5 C31.4 16.6 28 15.2 24 15.2 C20 15.2 16.6 16.6 15 20.5 Z',
   };
 
-  // Convert SVG coords → percentage for absolute overlay
-  // SVG viewBox is 1200×520
   const toPercent = (x: number, y: number) => ({
     left: `${(x / 1200) * 100}%`,
     top:  `${(y / 520)  * 100}%`,
@@ -121,7 +142,6 @@ export default function GoalJourneyMap({
 
   return (
     <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', border: '1px solid var(--line)' }}>
-
       {/* ── Main SVG ── */}
       <svg
         viewBox="0 0 1200 520"
@@ -130,35 +150,26 @@ export default function GoalJourneyMap({
         aria-label="Goal journey map"
       >
         <defs>
-          {/* Sky */}
           <linearGradient id="jm-sky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%"   stopColor="#03060f" />
             <stop offset="60%"  stopColor="#060d1a" />
             <stop offset="100%" stopColor="#0d1828" />
           </linearGradient>
 
-          {/* Trail glow gradient along path direction */}
           <linearGradient id="jm-trail" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stopColor={av.tone}   stopOpacity="0.4" />
             <stop offset="60%"  stopColor="#60a5fa"   stopOpacity="0.9" />
             <stop offset="100%" stopColor="#a5f3fc"   stopOpacity="1"   />
           </linearGradient>
 
-          {/* Glow filter for trail */}
           <filter id="jm-glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
 
-          {/* Soft glow for flag */}
           <filter id="jm-flag-glow" x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-
-          {/* Avatar drop shadow */}
-          <filter id="jm-av-shadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor={av.tone} floodOpacity="0.5" />
           </filter>
         </defs>
 
@@ -222,45 +233,85 @@ export default function GoalJourneyMap({
         <circle cx="90" cy="455" r="9"  fill="#1c2638" stroke={av.tone} strokeWidth="2" />
         <circle cx="90" cy="455" r="4"  fill={av.tone} />
 
-        {/* ── Checkpoint markers ── */}
+        {/* ── Checkpoint markers (4 to 20) ── */}
         {cpFractions.map((f, i) => {
           const p = posAt(f);
           const reached = fraction >= f;
-          const label = `${Math.round(f * target)}${unit}`;
-          // offset label above/below alternating
-          const labelY = p.y - 22;
+          const milestoneVal = Math.round((target * ((i + 1) / numCheckpoints)) * 10) / 10;
+          const label = `${milestoneVal}${unit}`;
+          const rewardText = rewards[i]?.reward || `Milestone ${i + 1} Reward 🎉`;
+          const labelY = p.y - 20;
+
           return (
-            <g key={i}>
+            <g
+              key={i}
+              onClick={() =>
+                setActiveModalReward({
+                  index: i + 1,
+                  value: milestoneVal,
+                  reward: rewardText,
+                  reached,
+                })
+              }
+              style={{ cursor: 'pointer' }}
+            >
               {reached && (
-                <circle cx={p.x} cy={p.y} r="18" fill={av.tone} opacity="0.18" />
+                <circle cx={p.x} cy={p.y} r="18" fill={av.tone} opacity="0.25" />
               )}
-              <circle cx={p.x} cy={p.y} r="11" fill={reached ? av.tone : '#1c2638'}
-                stroke={reached ? av.tone : '#3a4556'} strokeWidth="2"
-                style={{ filter: reached ? `drop-shadow(0 0 8px ${av.tone})` : 'none', transition: 'all 0.5s ease' }}
-              />
-              <circle cx={p.x} cy={p.y} r="5" fill={reached ? '#fff' : '#4a5568'}
-                style={{ transition: 'fill 0.5s ease' }} />
-              {/* Label pill background */}
-              <rect
-                x={p.x - 24} y={labelY - 14}
-                width={48} height={18}
-                rx={9}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={reached ? 11 : 9}
                 fill={reached ? av.tone : '#1c2638'}
-                stroke={reached ? av.tone : '#3a4556'}
-                strokeWidth="1"
-                opacity={reached ? 0.95 : 0.85}
+                stroke={reached ? '#fff' : '#3a4556'}
+                strokeWidth={reached ? '2.5' : '1.5'}
+                style={{
+                  filter: reached ? `drop-shadow(0 0 10px ${av.tone})` : 'none',
+                  transition: 'all 0.5s ease',
+                }}
               />
-              <text
-                x={p.x} y={labelY - 2}
-                textAnchor="middle"
-                fill={reached ? '#fff' : '#7d8796'}
-                fontSize="10"
-                fontFamily="Inter, sans-serif"
-                fontWeight="700"
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={reached ? 5 : 3.5}
+                fill={reached ? '#fff' : '#6b7280'}
                 style={{ transition: 'fill 0.5s ease' }}
-              >
-                {label}
-              </text>
+              />
+
+              {/* Gift icon for unlocked rewards */}
+              {reached ? (
+                <text x={p.x} y={labelY - 14} textAnchor="middle" fontSize="12">
+                  🎁
+                </text>
+              ) : null}
+
+              {/* Label pill background (shown for small counts or alternating for dense checkpoints) */}
+              {(numCheckpoints <= 10 || i % 2 === 0 || i === numCheckpoints - 1) && (
+                <>
+                  <rect
+                    x={p.x - 22}
+                    y={labelY - 12}
+                    width={44}
+                    height={16}
+                    rx={8}
+                    fill={reached ? av.tone : '#1c2638'}
+                    stroke={reached ? '#fff' : '#3a4556'}
+                    strokeWidth="1"
+                    opacity={reached ? 0.95 : 0.85}
+                  />
+                  <text
+                    x={p.x}
+                    y={labelY - 1}
+                    textAnchor="middle"
+                    fill={reached ? '#fff' : '#9ca3af'}
+                    fontSize="9.5"
+                    fontFamily="Inter, sans-serif"
+                    fontWeight="700"
+                  >
+                    {label}
+                  </text>
+                </>
+              )}
             </g>
           );
         })}
@@ -285,7 +336,7 @@ export default function GoalJourneyMap({
           fontFamily="Inter, sans-serif" fontWeight="600" letterSpacing="0.06em">START</text>
       </svg>
 
-      {/* ── Avatar overlay (absolutely positioned, transitions via left/top) ── */}
+      {/* ── Avatar overlay (traveling smoothly along road) ── */}
       <div
         aria-label="Avatar position"
         style={{
@@ -298,9 +349,7 @@ export default function GoalJourneyMap({
           pointerEvents: 'none',
         }}
       >
-        {/* Bob container */}
         <div className="gt-bob" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-
           {/* Label pill */}
           <div style={{
             padding: '3px 10px',
@@ -318,14 +367,12 @@ export default function GoalJourneyMap({
 
           {/* Avatar circle */}
           <div style={{ position: 'relative', width: 52, height: 52 }}>
-            {/* Pulse ring */}
             <div className="gt-pulse" style={{
               position: 'absolute', inset: 0,
               borderRadius: '50%',
               background: av.tone,
               opacity: 0.35,
             }} />
-            {/* Outer ring */}
             <div style={{
               position: 'absolute', inset: 0,
               borderRadius: '50%',
@@ -334,7 +381,6 @@ export default function GoalJourneyMap({
               boxSizing: 'border-box',
               boxShadow: `0 0 20px ${av.tone}66, 0 8px 24px rgba(0,0,0,0.5)`,
             }}>
-              {/* Inner circle */}
               <div style={{
                 width: '100%', height: '100%',
                 borderRadius: '50%',
@@ -343,13 +389,9 @@ export default function GoalJourneyMap({
               }}>
                 <svg viewBox="0 0 48 48" width="46" height="46" style={{ display: 'block' }}>
                   <rect width="48" height="48" fill="#1b212b" />
-                  {/* Body */}
                   <path d="M8 50 C8 37 15 31.5 24 31.5 C33 31.5 40 37 40 50 Z" fill={av.tone} />
-                  {/* Head */}
                   <circle cx="24" cy="20" r="8.5" fill={av.skin} />
-                  {/* Hair */}
                   <path d={HAIR[av.hairStyle] ?? HAIR.short} fill={av.hairColor} />
-                  {/* Eyes */}
                   <ellipse cx="21" cy="20" rx="1.4" ry="1.7" fill="#1a1a2e" />
                   <ellipse cx="27" cy="20" rx="1.4" ry="1.7" fill="#1a1a2e" />
                   <circle cx="21.5" cy="19.3" r="0.5" fill="white" />
@@ -359,7 +401,6 @@ export default function GoalJourneyMap({
             </div>
           </div>
 
-          {/* Arrow pointer */}
           <div style={{
             width: 0, height: 0,
             borderLeft: '6px solid transparent',
@@ -370,6 +411,85 @@ export default function GoalJourneyMap({
           }} />
         </div>
       </div>
+
+      {/* ── Interactive Milestone Reward Modal / Popover ── */}
+      <AnimatePresence>
+        {activeModalReward && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 30,
+              background: 'rgba(15, 23, 42, 0.95)',
+              backdropFilter: 'blur(16px)',
+              border: `2px solid ${activeModalReward.reached ? '#3fcf8e' : 'var(--line)'}`,
+              borderRadius: 20,
+              padding: '24px 28px',
+              maxWidth: 380,
+              width: '90%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.7)',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 36, marginBottom: 8 }}>
+              {activeModalReward.reached ? '🎉' : '🔒'}
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', marginBottom: 4 }}>
+              Checkpoint {activeModalReward.index} ({activeModalReward.value} {unit})
+            </h3>
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: activeModalReward.reached ? '#3fcf8e' : '#f59e0b',
+                marginBottom: 16,
+              }}
+            >
+              {activeModalReward.reached
+                ? '✓ Reached & Unlocked!'
+                : `Locked — reach ${activeModalReward.value} ${unit} to unlock`}
+            </p>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                borderRadius: 14,
+                padding: '14px 18px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                marginBottom: 18,
+              }}
+            >
+              <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 4 }}>
+                Designated Reward:
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
+                {activeModalReward.reward}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveModalReward(null)}
+              style={{
+                background: 'var(--brand)',
+                color: '#fff',
+                border: 'none',
+                padding: '8px 20px',
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Got it
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Legend strip ── */}
       <div style={{
@@ -387,7 +507,7 @@ export default function GoalJourneyMap({
         {[
           { color: av.tone,   label: 'Travelled' },
           { color: '#3a4556', label: 'Road ahead' },
-          { color: '#3fcf8e', label: 'Checkpoint' },
+          { color: '#3fcf8e', label: 'Milestone Reward (Click pins)' },
         ].map(({ color, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 12, height: 4, borderRadius: 2, background: color }} />

@@ -8,6 +8,8 @@ import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
 interface Goal {
   _id: string;
   name: string;
+  description?: string;
+  goalType: 'personal' | 'collaborative' | 'competitive' | 'open';
   target: number;
   unit: string;
   startDate: string;
@@ -20,8 +22,24 @@ interface Goal {
   avatarHairColor: string;
   status: 'active' | 'completed' | 'abandoned';
   checkpoints: number;
+  rewards?: { checkpointIndex: number; reward: string }[];
+  creator?: {
+    _id: string;
+    username: string;
+    name: string;
+    picture?: string;
+  };
+  members?: { auth0Id: string; status: string }[];
   log: { amount: number; note: string; date: string }[];
 }
+
+const TAB_OPTIONS = [
+  { id: 'all', label: 'All Goals', icon: '🌟' },
+  { id: 'my', label: 'My Journeys', icon: '👤' },
+  { id: 'collaborative', label: 'Collaborative', icon: '🤝' },
+  { id: 'competitive', label: 'Competitive', icon: '🏆' },
+  { id: 'open', label: 'Open Challenges', icon: '🌐' },
+];
 
 function getStatus(goal: Goal): { label: string; color: string } {
   if (goal.status === 'completed') return { label: 'Completed ✓', color: '#3fcf8e' };
@@ -29,6 +47,11 @@ function getStatus(goal: Goal): { label: string; color: string } {
 
   const now = new Date();
   const end = new Date(goal.endDate);
+
+  if (goal.goalType === 'open' && now > end) {
+    return { label: 'Expired ⌛', color: '#9ca3af' };
+  }
+
   const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   const pct = goal.target > 0 ? (goal.progress / goal.target) * 100 : 0;
   const totalDays = Math.ceil((end.getTime() - new Date(goal.startDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -41,17 +64,21 @@ function getStatus(goal: Goal): { label: string; color: string } {
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentUserId, setCurrentUserId] = useState('');
 
-  const fetchGoals = () => {
-    fetch('/api/goals')
+  const fetchGoals = (type = 'all') => {
+    setLoading(true);
+    fetch(`/api/goals?type=${type}`)
       .then(async r => {
         const data = await r.json();
         if (!r.ok) {
           setError(data.error || 'Failed to load goals.');
         } else {
           setGoals(data.goals || []);
+          if (data.currentUserId) setCurrentUserId(data.currentUserId);
         }
         setLoading(false);
       })
@@ -62,26 +89,26 @@ export default function GoalsPage() {
   };
 
   useEffect(() => {
-    fetchGoals();
-  }, []);
+    fetchGoals(activeTab);
+  }, [activeTab]);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
 
-      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px 80px' }}>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px 100px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 44, flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36, flexWrap: 'wrap', gap: 16 }}>
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
             <h1 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 800, color: 'var(--ink)', letterSpacing: '-1px', marginBottom: 8 }}>
-              My Goals
+              Goal Journeys
             </h1>
             <p style={{ color: 'var(--ink-muted)', fontSize: 16 }}>
-              {goals.length === 0 && !loading ? 'Start your first journey below.' : `${goals.length} goal${goals.length !== 1 ? 's' : ''} in progress`}
+              Personal milestones, team collaboration, friendly competitions, and open challenges.
             </p>
           </motion.div>
 
@@ -102,223 +129,327 @@ export default function GoalsPage() {
                 padding: '12px 24px',
                 fontWeight: 700,
                 fontSize: 15,
-                display: 'flex', alignItems: 'center', gap: 8,
-                boxShadow: '0 0 24px rgba(59,130,246,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 0 24px var(--neon-glow)',
               }}
             >
-              + New Goal
+              + Create New Goal
             </Link>
           </motion.div>
         </div>
 
+        {/* Tab Filters */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            overflowX: 'auto',
+            paddingBottom: 8,
+            marginBottom: 36,
+          }}
+        >
+          {TAB_OPTIONS.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 18px',
+                  borderRadius: 12,
+                  border: `1.5px solid ${isActive ? 'var(--brand)' : 'var(--line)'}`,
+                  background: isActive ? 'var(--brand-soft)' : 'var(--surface)',
+                  color: isActive ? 'var(--brand)' : 'var(--ink-muted)',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Error Notice */}
+        {error && (
+          <div
+            style={{
+              padding: '16px 20px',
+              borderRadius: 12,
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#f87171',
+              marginBottom: 32,
+              fontSize: 14,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {/* Loading Spinner */}
         {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 0.9, ease: 'linear' }}
               style={{
-                width: 48, height: 48, borderRadius: '50%',
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
                 border: '3px solid var(--line)',
                 borderTopColor: 'var(--brand)',
-                boxShadow: '0 0 16px var(--neon-glow)',
               }}
             />
           </div>
         )}
 
-        {/* Error notice */}
-        {error && (
-          <div style={{
-            background: 'rgba(255,123,123,0.1)',
-            border: '1px solid rgba(255,123,123,0.3)',
-            borderRadius: 14,
-            padding: '20px 24px',
-            color: '#ff7b7b',
-            textAlign: 'center',
-            marginBottom: 24,
-          }}>
-            <p style={{ margin: '0 0 12px', fontWeight: 600 }}>{error}</p>
-            <button
-              onClick={() => { setError(''); setLoading(true); fetchGoals(); }}
+        {/* Empty State */}
+        {!loading && goals.length === 0 && (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '80px 24px',
+              background: 'var(--surface)',
+              borderRadius: 20,
+              border: '1px solid var(--line)',
+            }}
+          >
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🗺️</div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', marginBottom: 8 }}>
+              No goals found in this view
+            </h2>
+            <p style={{ color: 'var(--ink-muted)', fontSize: 15, maxWidth: 460, margin: '0 auto 24px' }}>
+              Create your first personal milestone, set up a collaborative team challenge, or join open community goals.
+            </p>
+            <Link
+              href="/goals/new"
               style={{
                 background: 'var(--brand)',
                 color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '8px 18px',
-                cursor: 'pointer',
-                fontWeight: 600,
+                padding: '12px 24px',
+                borderRadius: 12,
+                textDecoration: 'none',
+                fontWeight: 700,
+                fontSize: 14,
+                display: 'inline-block',
               }}
             >
-              Retry
-            </button>
+              + Create Your First Goal
+            </Link>
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && !error && goals.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
+        {/* Goals Grid */}
+        {!loading && goals.length > 0 && (
+          <div
             style={{
-              textAlign: 'center', padding: '80px 24px',
-              background: 'var(--surface)',
-              borderRadius: 24,
-              border: '1px dashed var(--line-strong)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+              gap: 24,
             }}
           >
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-              style={{ fontSize: 72, marginBottom: 20 }}
-            >
-              🗺️
-            </motion.div>
-            <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>No goals set yet</h2>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 16, marginBottom: 32, maxWidth: 440, margin: '0 auto 32px' }}>
-              Create your first goal, choose your avatar companion, and watch yourself advance along the roadmap!
-            </p>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
-              <Link
-                href="/goals/new"
-                style={{
-                  background: 'var(--brand)',
-                  color: '#fff',
-                  textDecoration: 'none',
-                  borderRadius: 12,
-                  padding: '14px 32px',
-                  fontWeight: 700,
-                  fontSize: 16,
-                  display: 'inline-block',
-                  boxShadow: '0 0 24px rgba(59,130,246,0.4)',
-                }}
-              >
-                Create Your First Goal →
-              </Link>
-            </motion.div>
-          </motion.div>
-        )}
+            {goals.map((goal, idx) => {
+              const statusInfo = getStatus(goal);
+              const pct = goal.target > 0 ? Math.min(100, Math.round((goal.progress / goal.target) * 100)) : 0;
+              const daysLeft = Math.max(0, Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+              const av = AVATAR_CONFIGS[goal.avatarIndex] || AVATAR_CONFIGS[0];
+              const memberCount = goal.members?.filter(m => m.status === 'active').length || 1;
+              const numCheckpoints = goal.checkpoints || 4;
 
-        {/* Goals Grid */}
-        {!loading && !error && goals.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
-            {goals.map((goal, i) => {
-              const pct = goal.target > 0 ? Math.round((goal.progress / goal.target) * 100) : 0;
-              const daysLeft = Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-              const status = getStatus(goal);
-              const av = AVATAR_CONFIGS[goal.avatarIndex] ?? AVATAR_CONFIGS[0];
+              const goalTypeIcon =
+                goal.goalType === 'collaborative'
+                  ? '🤝'
+                  : goal.goalType === 'competitive'
+                  ? '🏆'
+                  : goal.goalType === 'open'
+                  ? '🌐'
+                  : '🎯';
 
               return (
                 <motion.div
                   key={goal._id}
-                  initial={{ opacity: 0, y: 25 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: i * 0.08 }}
-                  whileHover={{ y: -5, boxShadow: `0 0 24px ${av.tone}33, 0 12px 32px rgba(0,0,0,0.45)` }}
+                  transition={{ delay: idx * 0.05, duration: 0.35 }}
+                  whileHover={{ y: -4, boxShadow: '0 12px 32px rgba(0,0,0,0.3)' }}
                   style={{
                     background: 'var(--surface)',
-                    border: '1px solid var(--line)',
                     borderRadius: 20,
-                    padding: 28,
-                    height: '100%',
+                    border: '1px solid var(--line)',
+                    padding: 24,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 18,
-                    cursor: 'pointer',
-                    transition: 'border-color 0.25s, box-shadow 0.25s',
+                    justifyContent: 'space-between',
+                    textDecoration: 'none',
+                    transition: 'border-color 0.2s',
                   }}
                 >
-                  <Link
-                    href={`/goals/${goal._id}`}
-                    style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', height: '100%', gap: 18 }}
-                  >
-                    {/* Top row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 style={{
-                          fontWeight: 700, fontSize: 18, color: 'var(--ink)',
-                          marginBottom: 4, overflow: 'hidden',
-                          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {goal.name}
-                        </h3>
-                        <p style={{ color: 'var(--ink-subtle)', fontSize: 13 }}>
-                          {goal.progress} / {goal.target} {goal.unit}
-                        </p>
-                      </div>
-                      <div style={{ marginLeft: 12, flexShrink: 0 }}>
-                        <div style={{
-                          padding: 3, borderRadius: '50%',
-                          background: `linear-gradient(135deg, ${av.tone}, ${av.tone}88)`,
-                          boxShadow: `0 0 12px ${av.tone}44`,
-                        }}>
-                          <Avatar {...av} size={52} />
-                        </div>
-                      </div>
+                  <div>
+                    {/* Top Badge Row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: 20,
+                          background: 'var(--brand-soft)',
+                          color: 'var(--brand)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        <span>{goalTypeIcon}</span>
+                        <span>{goal.goalType || 'Personal'}</span>
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: 20,
+                          background: 'var(--bg)',
+                          color: statusInfo.color,
+                          border: '1px solid var(--line)',
+                        }}
+                      >
+                        {statusInfo.label}
+                      </span>
                     </div>
 
-                    {/* Progress bar */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, color: 'var(--ink-subtle)', fontWeight: 600 }}>Progress</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: av.tone }}>{pct}%</span>
+                    {/* Goal Title & Creator */}
+                    <Link
+                      href={`/goals/${goal._id}`}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <h2
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 800,
+                          color: 'var(--ink)',
+                          marginBottom: 6,
+                          letterSpacing: '-0.3px',
+                        }}
+                      >
+                        {goal.name}
+                      </h2>
+                    </Link>
+
+                    {goal.creator?.username && (
+                      <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginBottom: 12 }}>
+                        by <span style={{ color: 'var(--brand)', fontWeight: 600 }}>@{goal.creator.username}</span>
                       </div>
-                      <div className="progress-bar">
-                        <motion.div
-                          className="progress-bar-fill"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, pct)}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                          style={{ background: `linear-gradient(90deg, ${av.tone}, #60a5fa)` }}
+                    )}
+
+                    {goal.description && (
+                      <p
+                        style={{
+                          fontSize: 13,
+                          color: 'var(--ink-muted)',
+                          marginBottom: 16,
+                          lineHeight: 1.45,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {goal.description}
+                      </p>
+                    )}
+
+                    {/* Checkpoints & Rewards Badge */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        background: 'var(--bg)',
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: '1px solid var(--line)',
+                        marginBottom: 18,
+                        fontSize: 12,
+                        color: 'var(--ink)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span>🎁</span>
+                      <span>{numCheckpoints} Checkpoints & Custom Rewards</span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
+                        <span style={{ color: 'var(--ink-muted)' }}>Progress</span>
+                        <strong style={{ color: 'var(--ink)' }}>
+                          {goal.progress} / {goal.target} {goal.unit} ({pct}%)
+                        </strong>
+                      </div>
+                      <div
+                        style={{
+                          background: 'var(--bg)',
+                          borderRadius: 8,
+                          height: 8,
+                          width: '100%',
+                          overflow: 'hidden',
+                          border: '1px solid var(--line)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: 'linear-gradient(90deg, var(--brand), #60a5fa)',
+                            width: `${pct}%`,
+                            height: '100%',
+                            borderRadius: 8,
+                            transition: 'width 0.4s ease',
+                          }}
                         />
                       </div>
                     </div>
+                  </div>
 
-                    {/* Key stats row */}
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <div style={{
-                        flex: 1, background: 'var(--surface-raised)', borderRadius: 12,
-                        padding: '10px 12px', textAlign: 'center',
-                      }}>
-                        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink)' }}>{pct}%</div>
-                        <div style={{ fontSize: 11, color: 'var(--ink-subtle)' }}>Done</div>
-                      </div>
-                      <div style={{
-                        flex: 1, background: 'var(--surface-raised)', borderRadius: 12,
-                        padding: '10px 12px', textAlign: 'center',
-                      }}>
-                        <div style={{ fontSize: 17, fontWeight: 800, color: daysLeft < 0 ? '#ff7b7b' : 'var(--ink)' }}>
-                          {daysLeft < 0 ? 'Overdue' : `${daysLeft}d`}
+                  {/* Footer Card Info & Action */}
+                  <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14, marginTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar config={av} size={32} />
+                        <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+                          {goal.goalType !== 'personal' ? `${memberCount} participant${memberCount > 1 ? 's' : ''}` : 'Solo Journey'}
+                          <div>{daysLeft} days left</div>
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--ink-subtle)' }}>Left</div>
                       </div>
-                      <div style={{
-                        flex: 1, background: 'var(--surface-raised)', borderRadius: 12,
-                        padding: '10px 12px', textAlign: 'center',
-                      }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: status.color }}>{status.label}</div>
-                        <div style={{ fontSize: 11, color: 'var(--ink-subtle)' }}>Status</div>
-                      </div>
-                    </div>
 
-                    {/* Footer link */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      paddingTop: 8, borderTop: '1px solid var(--line)', marginTop: 'auto',
-                    }}>
-                      <span style={{ fontSize: 12, color: 'var(--ink-subtle)' }}>
-                        {goal.log.length} update{goal.log.length !== 1 ? 's' : ''}
-                      </span>
-                      <span style={{
-                        fontSize: 13, color: 'var(--brand)', fontWeight: 700,
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}>
+                      <Link
+                        href={`/goals/${goal._id}`}
+                        style={{
+                          background: 'var(--brand-soft)',
+                          color: 'var(--brand)',
+                          textDecoration: 'none',
+                          padding: '7px 14px',
+                          borderRadius: 10,
+                          fontWeight: 700,
+                          fontSize: 13,
+                          transition: 'all 0.2s',
+                        }}
+                      >
                         View Journey →
-                      </span>
+                      </Link>
                     </div>
-                  </Link>
+                  </div>
                 </motion.div>
               );
             })}
