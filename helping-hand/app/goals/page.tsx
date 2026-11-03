@@ -3,6 +3,22 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FiTarget,
+  FiAward,
+  FiUsers,
+  FiGlobe,
+  FiPlus,
+  FiPlusCircle,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiClock,
+  FiGift,
+  FiArrowRight,
+  FiUser,
+  FiUserPlus,
+} from 'react-icons/fi';
+import { HiSparkles } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
 import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
 
@@ -35,29 +51,29 @@ interface Goal {
 }
 
 const MY_SUBTABS = [
-  { id: 'all', label: 'All My Goals', icon: '✨' },
-  { id: 'personal', label: 'Personal', icon: '🎯' },
-  { id: 'collaborative', label: 'Collaborative', icon: '🤝' },
-  { id: 'competitive', label: 'Competitive', icon: '🏆' },
-  { id: 'open', label: 'Open Joined', icon: '🌐' },
+  { id: 'all', label: 'All My Goals', icon: HiSparkles },
+  { id: 'personal', label: 'Personal', icon: FiTarget },
+  { id: 'collaborative', label: 'Collaborative', icon: FiUsers },
+  { id: 'competitive', label: 'Competitive', icon: FiAward },
+  { id: 'open', label: 'Open Joined', icon: FiGlobe },
 ];
 
 const PUBLIC_SUBTABS = [
-  { id: 'all', label: 'All Public', icon: '🌟' },
-  { id: 'open', label: 'Open Challenges', icon: '🌐' },
-  { id: 'collaborative', label: 'Collaborative', icon: '🤝' },
-  { id: 'competitive', label: 'Competitive', icon: '🏆' },
+  { id: 'all', label: 'All Public', icon: HiSparkles },
+  { id: 'open', label: 'Open Challenges', icon: FiGlobe },
+  { id: 'collaborative', label: 'Collaborative', icon: FiUsers },
+  { id: 'competitive', label: 'Competitive', icon: FiAward },
 ];
 
-function getStatus(goal: Goal): { label: string; color: string } {
-  if (goal.status === 'completed') return { label: 'Completed ✓', color: '#3fcf8e' };
-  if (goal.status === 'abandoned') return { label: 'Abandoned', color: '#ff7b7b' };
+function getStatus(goal: Goal): { label: string; color: string; icon: typeof FiCheckCircle } {
+  if (goal.status === 'completed') return { label: 'Completed', color: '#3fcf8e', icon: FiCheckCircle };
+  if (goal.status === 'abandoned') return { label: 'Abandoned', color: '#ff7b7b', icon: FiAlertCircle };
 
   const now = new Date();
   const end = new Date(goal.endDate);
 
   if (goal.goalType === 'open' && now > end) {
-    return { label: 'Expired ⌛', color: '#9ca3af' };
+    return { label: 'Expired', color: '#9ca3af', icon: FiClock };
   }
 
   const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -66,8 +82,17 @@ function getStatus(goal: Goal): { label: string; color: string } {
   const daysPassed = totalDays - daysLeft;
   const expectedPct = totalDays > 0 ? (daysPassed / totalDays) * 100 : 0;
 
-  if (pct >= expectedPct - 5) return { label: 'On Track 🟢', color: '#3fcf8e' };
-  return { label: 'Behind 🔴', color: '#ff7b7b' };
+  if (pct >= expectedPct - 5) return { label: 'On Track', color: '#3fcf8e', icon: FiCheckCircle };
+  return { label: 'Behind', color: '#ff7b7b', icon: FiAlertCircle };
+}
+
+function getGoalTypeIcon(type: string) {
+  switch (type) {
+    case 'collaborative': return FiUsers;
+    case 'competitive': return FiAward;
+    case 'open': return FiGlobe;
+    default: return FiTarget;
+  }
 }
 
 export default function GoalsPage() {
@@ -209,7 +234,8 @@ export default function GoalsPage() {
                 minHeight: 44,
               }}
             >
-              + Create New Goal
+              <FiPlusCircle style={{ fontSize: 16 }} />
+              <span>Create New Goal</span>
             </Link>
           </motion.div>
         </div>
@@ -271,7 +297,7 @@ export default function GoalsPage() {
               minHeight: 44,
             }}
           >
-            <span>👤</span>
+            <FiUser style={{ fontSize: 16 }} />
             <span>My Goals</span>
           </button>
 
@@ -296,7 +322,7 @@ export default function GoalsPage() {
               minHeight: 44,
             }}
           >
-            <span>🌐</span>
+            <FiGlobe style={{ fontSize: 16 }} />
             <span>Public Goals</span>
           </button>
         </div>
@@ -305,6 +331,7 @@ export default function GoalsPage() {
         <div className="tabs-scroll" style={{ marginBottom: 28 }}>
           {currentSubtabs.map(tab => {
             const isActive = subTab === tab.id;
+            const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
@@ -328,7 +355,7 @@ export default function GoalsPage() {
                   minHeight: 38,
                 }}
               >
-                <span>{tab.icon}</span>
+                <Icon style={{ fontSize: 15 }} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -380,8 +407,12 @@ export default function GoalsPage() {
               border: '1px solid var(--line)',
             }}
           >
-            <div style={{ fontSize: 44, marginBottom: 14 }}>
-              {parentTab === 'my' ? '🗺️' : '🌐'}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+              {parentTab === 'my' ? (
+                <FiTarget style={{ fontSize: 44, color: 'var(--brand)' }} />
+              ) : (
+                <FiGlobe style={{ fontSize: 44, color: 'var(--brand)' }} />
+              )}
             </div>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', marginBottom: 8 }}>
               {parentTab === 'my'
@@ -409,9 +440,13 @@ export default function GoalsPage() {
                     fontSize: 14,
                     cursor: 'pointer',
                     minHeight: 44,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
-                  Explore Public Goals →
+                  <span>Explore Public Goals</span>
+                  <FiArrowRight style={{ fontSize: 14 }} />
                 </button>
               )}
               <Link
@@ -424,12 +459,14 @@ export default function GoalsPage() {
                   textDecoration: 'none',
                   fontWeight: 700,
                   fontSize: 14,
-                  display: 'inline-block',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                   minHeight: 44,
-                  lineHeight: '22px',
                 }}
               >
-                + Create New Goal
+                <FiPlusCircle style={{ fontSize: 16 }} />
+                <span>Create New Goal</span>
               </Link>
             </div>
           </div>
@@ -457,14 +494,8 @@ export default function GoalsPage() {
                 m => m.auth0Id === currentUserId && m.status === 'pending_approval'
               );
 
-              const goalTypeIcon =
-                goal.goalType === 'collaborative'
-                  ? '🤝'
-                  : goal.goalType === 'competitive'
-                  ? '🏆'
-                  : goal.goalType === 'open'
-                  ? '🌐'
-                  : '🎯';
+              const GoalTypeIcon = getGoalTypeIcon(goal.goalType);
+              const StatusIcon = statusInfo.icon;
 
               return (
                 <motion.div
@@ -498,11 +529,11 @@ export default function GoalsPage() {
                           color: 'var(--brand)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 4,
+                          gap: 6,
                           textTransform: 'capitalize',
                         }}
                       >
-                        <span>{goalTypeIcon}</span>
+                        <GoalTypeIcon style={{ fontSize: 13 }} />
                         <span>{goal.goalType || 'Personal'}</span>
                       </span>
 
@@ -515,9 +546,13 @@ export default function GoalsPage() {
                           background: 'var(--bg)',
                           color: statusInfo.color,
                           border: '1px solid var(--line)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
                         }}
                       >
-                        {statusInfo.label}
+                        <StatusIcon style={{ fontSize: 12 }} />
+                        <span>{statusInfo.label}</span>
                       </span>
                     </div>
 
@@ -568,7 +603,7 @@ export default function GoalsPage() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: 7,
                         background: 'var(--bg)',
                         padding: '7px 10px',
                         borderRadius: 10,
@@ -579,7 +614,7 @@ export default function GoalsPage() {
                         fontWeight: 600,
                       }}
                     >
-                      <span>🎁</span>
+                      <FiGift style={{ fontSize: 14, color: 'var(--brand)' }} />
                       <span>{numCheckpoints} Checkpoints & Rewards</span>
                     </div>
 
@@ -641,9 +676,11 @@ export default function GoalsPage() {
                             minHeight: 36,
                             display: 'inline-flex',
                             alignItems: 'center',
+                            gap: 5,
                           }}
                         >
-                          View Road →
+                          <span>View Road</span>
+                          <FiArrowRight style={{ fontSize: 13 }} />
                         </Link>
                       ) : isPending ? (
                         <span
@@ -654,9 +691,13 @@ export default function GoalsPage() {
                             borderRadius: 8,
                             fontSize: 11.5,
                             fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
                           }}
                         >
-                          ⏳ Pending
+                          <FiClock style={{ fontSize: 12 }} />
+                          <span>Pending</span>
                         </span>
                       ) : (
                         <button
@@ -675,13 +716,24 @@ export default function GoalsPage() {
                             whiteSpace: 'nowrap',
                             minHeight: 36,
                             boxShadow: goal.goalType === 'open' ? '0 0 12px var(--neon-glow)' : 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
                           }}
                         >
-                          {joiningId === goal._id
-                            ? 'Joining...'
-                            : goal.goalType === 'open'
-                            ? '🌐 Join Now'
-                            : '🤝 Request to Join'}
+                          {joiningId === goal._id ? (
+                            'Joining...'
+                          ) : goal.goalType === 'open' ? (
+                            <>
+                              <FiPlus style={{ fontSize: 14 }} />
+                              <span>Join Now</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiUserPlus style={{ fontSize: 14 }} />
+                              <span>Request to Join</span>
+                            </>
+                          )}
                         </button>
                       )}
                     </div>

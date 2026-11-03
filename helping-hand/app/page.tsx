@@ -2,6 +2,16 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import {
+  FiTarget,
+  FiBookOpen,
+  FiCheckSquare,
+  FiBarChart2,
+  FiPlusCircle,
+  FiEye,
+  FiArrowRight,
+} from 'react-icons/fi';
+import { HiHandRaised } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
 import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
 
@@ -18,25 +28,25 @@ const PARTICLES = [
 
 const FEATURES = [
   {
-    icon: '🎯',
+    icon: FiTarget,
     title: 'Goal Tracker',
     desc: 'Set ambitious targets and watch your custom avatar journey across the interactive roadmap.',
     color: '#3b82f6',
   },
   {
-    icon: '📚',
+    icon: FiBookOpen,
     title: 'Learning Hub',
     desc: 'Curated resources and micro-milestones to build skills steadily every single day.',
     color: '#3cc7b4',
   },
   {
-    icon: '✅',
+    icon: FiCheckSquare,
     title: 'Habit Tracker',
     desc: 'Build powerful routines with checkpoints, streaks, reminders, and visual celebration markers.',
     color: '#3fcf8e',
   },
   {
-    icon: '📊',
+    icon: FiBarChart2,
     title: 'Progress Analytics',
     desc: 'Real-time pace calculation, remaining distance, countdowns, and historical activity timeline.',
     color: '#60a5fa',
@@ -210,7 +220,8 @@ export default function HomePage() {
                   justifyContent: 'center',
                 }}
               >
-                🚀 Create a Goal
+                <FiPlusCircle style={{ fontSize: 18 }} />
+                <span>Create a Goal</span>
               </Link>
             </motion.div>
 
@@ -233,7 +244,8 @@ export default function HomePage() {
                   justifyContent: 'center',
                 }}
               >
-                👀 View Goals & Tracker
+                <FiEye style={{ fontSize: 18 }} />
+                <span>View Goals & Tracker</span>
               </Link>
             </motion.div>
           </motion.div>
@@ -296,9 +308,9 @@ export default function HomePage() {
                 background: `${f.color}18`,
                 border: `1.5px solid ${f.color}44`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 26, marginBottom: 20,
+                fontSize: 24, marginBottom: 20, color: f.color,
               }}>
-                {f.icon}
+                <f.icon />
               </div>
               <h3 style={{ fontWeight: 700, fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>{f.title}</h3>
               <p style={{ color: 'var(--ink-muted)', lineHeight: 1.6, fontSize: 14 }}>{f.desc}</p>
@@ -433,7 +445,7 @@ export default function HomePage() {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 22 }}>✋</span>
+            <HiHandRaised style={{ fontSize: 24, color: 'var(--brand)' }} />
             <span style={{ fontWeight: 800, color: 'var(--ink)' }}>HelpingHand</span>
           </div>
           <p style={{ color: 'var(--ink-subtle)', fontSize: 13 }}>

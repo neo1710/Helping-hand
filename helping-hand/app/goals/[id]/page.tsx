@@ -3,6 +3,22 @@ import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FiArrowLeft,
+  FiGlobe,
+  FiUserPlus,
+  FiClock,
+  FiCheck,
+  FiAward,
+  FiX,
+  FiGift,
+  FiCheckCircle,
+  FiLock,
+  FiUsers,
+  FiShield,
+  FiTrash2,
+  FiSend,
+} from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
 import GoalJourneyMap, { CheckpointRewardItem } from '@/components/GoalJourneyMap';
 
@@ -319,7 +335,7 @@ function GoalJourneyContent() {
   const checkpointsList = Array.from({ length: numCheckpoints }).map((_, i) => {
     const val = Math.round((goal.target * ((i + 1) / numCheckpoints)) * 10) / 10;
     const isReached = displayProgress >= val;
-    const rewardText = goal.rewards?.[i]?.reward || `Milestone ${i + 1} Celebration 🎉`;
+    const rewardText = goal.rewards?.[i]?.reward || `Milestone ${i + 1} Celebration`;
     return {
       index: i + 1,
       value: val,
@@ -365,7 +381,8 @@ function GoalJourneyContent() {
               fontWeight: 600,
             }}
           >
-            ← Back to all goals
+            <FiArrowLeft />
+            <span>Back to all goals</span>
           </Link>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -387,13 +404,24 @@ function GoalJourneyContent() {
                   opacity: isExpired ? 0.6 : 1,
                   boxShadow: '0 4px 14px var(--neon-glow)',
                   minHeight: 40,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                {joining
-                  ? 'Joining...'
-                  : goal.goalType === 'open'
-                  ? '🌐 Join Open Goal'
-                  : '🤝 Request to Join'}
+                {joining ? (
+                  'Joining...'
+                ) : goal.goalType === 'open' ? (
+                  <>
+                    <FiGlobe style={{ fontSize: 15 }} />
+                    <span>Join Open Goal</span>
+                  </>
+                ) : (
+                  <>
+                    <FiUserPlus style={{ fontSize: 15 }} />
+                    <span>Request to Join</span>
+                  </>
+                )}
               </motion.button>
             )}
 
@@ -406,9 +434,13 @@ function GoalJourneyContent() {
                   borderRadius: 20,
                   fontSize: 12.5,
                   fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                ⏳ Request Pending Approval
+                <FiClock style={{ fontSize: 13 }} />
+                <span>Request Pending Approval</span>
               </span>
             )}
 
@@ -426,9 +458,13 @@ function GoalJourneyContent() {
                   fontSize: 13,
                   cursor: 'pointer',
                   minHeight: 40,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                ✓ Accept Invitation
+                <FiCheck style={{ fontSize: 14 }} />
+                <span>Accept Invitation</span>
               </button>
             )}
 
@@ -447,9 +483,13 @@ function GoalJourneyContent() {
                   fontWeight: 600,
                   cursor: 'pointer',
                   minHeight: 38,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                {deleting ? 'Deleting...' : 'Delete Goal'}
+                <FiTrash2 style={{ fontSize: 13 }} />
+                <span>{deleting ? 'Deleting...' : 'Delete Goal'}</span>
               </button>
             )}
           </div>
@@ -477,7 +517,7 @@ function GoalJourneyContent() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24 }}>🏆</span>
+                <FiAward style={{ fontSize: 24 }} />
                 <span style={{ fontSize: 14, fontWeight: 800 }}>{unlockedRewardAlert}</span>
               </div>
               <button
@@ -492,9 +532,13 @@ function GoalJourneyContent() {
                   fontWeight: 700,
                   fontSize: 12,
                   cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
                 }}
               >
-                ✕ Dismiss
+                <FiX style={{ fontSize: 13 }} />
+                <span>Dismiss</span>
               </button>
             </motion.div>
           )}
@@ -709,7 +753,8 @@ function GoalJourneyContent() {
         >
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>🎁</span> Checkpoints & Rewards ({numCheckpoints} Milestones)
+              <FiGift style={{ fontSize: 20, color: 'var(--brand)' }} />
+              <span>Checkpoints & Rewards ({numCheckpoints} Milestones)</span>
             </h2>
             <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
               As you log progress towards your target, checkpoints automatically unlock and reveal your designated rewards.
@@ -758,8 +803,18 @@ function GoalJourneyContent() {
                   {cp.reward}
                 </div>
 
-                <div style={{ fontSize: 11.5, color: cp.isReached ? '#3fcf8e' : 'var(--ink-muted)', fontWeight: 600 }}>
-                  {cp.isReached ? '✓ Unlocked! Enjoy your reward' : `🔒 Needs ${(Math.max(0, cp.value - displayProgress)).toFixed(1)} ${goal.unit} more`}
+                <div style={{ fontSize: 11.5, color: cp.isReached ? '#3fcf8e' : 'var(--ink-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {cp.isReached ? (
+                    <>
+                      <FiCheckCircle style={{ fontSize: 13 }} />
+                      <span>Unlocked! Enjoy your reward</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiLock style={{ fontSize: 12 }} />
+                      <span>Needs {(Math.max(0, cp.value - displayProgress)).toFixed(1)} {goal.unit} more</span>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -779,7 +834,8 @@ function GoalJourneyContent() {
           >
             <div style={{ marginBottom: 16 }}>
               <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>🏆</span> Competition Leaderboard & Standings
+                <FiAward style={{ fontSize: 20, color: 'var(--brand)' }} />
+                <span>Competition Leaderboard & Standings</span>
               </h2>
               <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
                 Real-time competitor standings. Log your progress to climb the leaderboard!
@@ -788,7 +844,7 @@ function GoalJourneyContent() {
 
             <div style={{ display: 'grid', gap: 8 }}>
               {rankings.map((r, idx) => {
-                const rankBadge = idx === 0 ? '🥇 1st' : idx === 1 ? '🥈 2nd' : idx === 2 ? '🥉 3rd' : `#${idx + 1}`;
+                const rankBadge = idx === 0 ? '#1' : idx === 1 ? '#2' : idx === 2 ? '#3' : `#${idx + 1}`;
                 const isMe = r.userId === currentUserId || r.username === currentUsername;
                 return (
                   <div
@@ -806,8 +862,9 @@ function GoalJourneyContent() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, minWidth: 46, color: 'var(--brand)' }}>
-                        {rankBadge}
+                      <span style={{ fontSize: 15, fontWeight: 800, minWidth: 46, color: 'var(--brand)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {idx === 0 && <FiAward style={{ fontSize: 15 }} />}
+                        <span>{rankBadge}</span>
                       </span>
                       <div>
                         <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
@@ -847,7 +904,8 @@ function GoalJourneyContent() {
           >
             <div style={{ marginBottom: 16 }}>
               <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>🤝</span> Collaborative Team Members
+                <FiUsers style={{ fontSize: 20, color: 'var(--brand)' }} />
+                <span>Collaborative Team Members</span>
               </h2>
               <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
                 All active members contribute together to reach the target of {goal.target} {goal.unit}.
@@ -919,7 +977,8 @@ function GoalJourneyContent() {
           >
             <div>
               <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>⚡</span> Goal Admin & Member Invitations
+                <FiShield style={{ fontSize: 20, color: 'var(--brand)' }} />
+                <span>Goal Admin & Member Invitations</span>
               </h2>
               <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
                 Invite users by their unique username (@username) or approve incoming join requests.

@@ -3,6 +3,20 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import {
+  FiBell,
+  FiTarget,
+  FiPlusCircle,
+  FiUser,
+  FiCompass,
+  FiMap,
+  FiLogOut,
+  FiLogIn,
+  FiMenu,
+  FiX,
+  FiArrowRight,
+} from 'react-icons/fi';
+import { HiHandRaised } from 'react-icons/hi2';
 import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
@@ -22,6 +36,24 @@ export default function Navbar() {
       })
       .catch(() => {});
   }, []);
+
+  const navLinks = [
+    { href: '/goals', label: 'Goals' },
+    { href: '/goals/new', label: 'New Goal' },
+    { href: '/notifications', label: 'Notifications', badge: pendingCount },
+    { href: '/profile', label: 'Profile' },
+    { href: '/#features', label: 'Features' },
+    { href: '/#how-it-works', label: 'How It Works' },
+  ];
+
+  const mobileNavItems = [
+    { href: '/goals', label: 'All Goals', icon: FiTarget },
+    { href: '/goals/new', label: 'Create New Goal', icon: FiPlusCircle },
+    { href: '/notifications', label: 'Notifications', icon: FiBell, badge: pendingCount },
+    { href: '/profile', label: 'Profile & Settings', icon: FiUser },
+    { href: '/#features', label: 'Features', icon: FiCompass },
+    { href: '/#how-it-works', label: 'How It Works', icon: FiMap },
+  ];
 
   return (
     <nav
@@ -60,9 +92,9 @@ export default function Navbar() {
           <motion.span
             whileHover={{ rotate: [0, -10, 10, -5, 0], scale: 1.15 }}
             transition={{ duration: 0.5 }}
-            style={{ fontSize: 26, display: 'inline-block', cursor: 'pointer' }}
+            style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}
           >
-            ✋
+            <HiHandRaised style={{ fontSize: 26, color: 'var(--brand)' }} />
           </motion.span>
           <span
             style={{
@@ -78,14 +110,7 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }} className="hidden-mobile">
-          {[
-            { href: '/goals', label: 'Goals' },
-            { href: '/goals/new', label: 'New Goal' },
-            { href: '/notifications', label: 'Notifications', badge: pendingCount },
-            { href: '/profile', label: 'Profile' },
-            { href: '/#features', label: 'Features' },
-            { href: '/#how-it-works', label: 'How It Works' },
-          ].map(({ href, label, badge }) => (
+          {navLinks.map(({ href, label, badge }) => (
             <Link
               key={label}
               href={href}
@@ -139,20 +164,22 @@ export default function Navbar() {
             style={{
               position: 'relative',
               textDecoration: 'none',
-              padding: '6px',
+              padding: '8px',
               borderRadius: 8,
               color: 'var(--ink)',
-              fontSize: 18,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
             title="Notifications"
           >
-            🔔
+            <FiBell style={{ fontSize: 20 }} />
             {pendingCount > 0 && (
               <span
                 style={{
                   position: 'absolute',
-                  top: 0,
-                  right: 0,
+                  top: 2,
+                  right: 2,
                   background: '#ef4444',
                   color: '#fff',
                   borderRadius: '50%',
@@ -170,7 +197,8 @@ export default function Navbar() {
             )}
           </Link>
 
-          <ThemeToggle />
+          {/* Desktop Only Theme Toggle */}
+          <ThemeToggle className="hidden-mobile" />
 
           {/* User profile or Login */}
           {!isLoading && user ? (
@@ -246,6 +274,9 @@ export default function Navbar() {
                   borderRadius: 8,
                   border: '1px solid var(--line)',
                   transition: 'all 0.2s',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget;
@@ -258,7 +289,8 @@ export default function Navbar() {
                   el.style.borderColor = 'var(--line)';
                 }}
               >
-                Log Out
+                <FiLogOut style={{ fontSize: 14 }} />
+                <span>Log Out</span>
               </a>
             </div>
           ) : (
@@ -275,9 +307,13 @@ export default function Navbar() {
                   border: '1px solid var(--line)',
                   transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                Log In
+                <FiLogIn style={{ fontSize: 14 }} />
+                <span>Log In</span>
               </a>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="hidden-mobile">
                 <Link
@@ -297,7 +333,8 @@ export default function Navbar() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  Get Started →
+                  <span>Get Started</span>
+                  <FiArrowRight style={{ fontSize: 14 }} />
                 </Link>
               </motion.div>
             </div>
@@ -312,14 +349,16 @@ export default function Navbar() {
               background: 'transparent',
               border: '1px solid var(--line)',
               borderRadius: 8,
-              padding: '8px 12px',
+              padding: '8px 10px',
               color: 'var(--ink)',
               cursor: 'pointer',
-              fontSize: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
             aria-label="Toggle navigation menu"
           >
-            {mobileOpen ? '✕' : '☰'}
+            {mobileOpen ? <FiX style={{ fontSize: 22 }} /> : <FiMenu style={{ fontSize: 22 }} />}
           </button>
         </div>
       </div>
@@ -340,14 +379,7 @@ export default function Navbar() {
               gap: 8,
             }}
           >
-            {[
-              { href: '/goals', label: '🎯 All Goals' },
-              { href: '/goals/new', label: '➕ Create New Goal' },
-              { href: '/notifications', label: '🔔 Notifications', badge: pendingCount },
-              { href: '/profile', label: '👤 Profile & Settings' },
-              { href: '/#features', label: '✨ Features' },
-              { href: '/#how-it-works', label: '🗺️ How It Works' },
-            ].map(({ href, label, badge }) => (
+            {mobileNavItems.map(({ href, label, icon: Icon, badge }) => (
               <Link
                 key={label}
                 href={href}
@@ -365,7 +397,10 @@ export default function Navbar() {
                   justifyContent: 'space-between',
                 }}
               >
-                <span>{label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Icon style={{ fontSize: 18, color: 'var(--brand)' }} />
+                  <span>{label}</span>
+                </div>
                 {badge !== undefined && badge > 0 && (
                   <span
                     style={{
@@ -383,6 +418,9 @@ export default function Navbar() {
               </Link>
             ))}
 
+            {/* Light / Dark Mode Toggle ONLY in Mobile Drawer for mobile */}
+            <ThemeToggle variant="menu-item" />
+
             {user ? (
               <a
                 href="/auth/logout"
@@ -397,10 +435,12 @@ export default function Navbar() {
                   background: 'rgba(239, 68, 68, 0.08)',
                   display: 'flex',
                   alignItems: 'center',
+                  gap: 10,
                   marginTop: 6,
                 }}
               >
-                🚪 Log Out
+                <FiLogOut style={{ fontSize: 18 }} />
+                <span>Log Out</span>
               </a>
             ) : (
               <a
@@ -416,10 +456,12 @@ export default function Navbar() {
                   background: 'var(--brand-soft)',
                   display: 'flex',
                   alignItems: 'center',
+                  gap: 10,
                   marginTop: 6,
                 }}
               >
-                🔑 Log In
+                <FiLogIn style={{ fontSize: 18 }} />
+                <span>Log In</span>
               </a>
             )}
           </motion.div>

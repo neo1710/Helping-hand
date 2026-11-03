@@ -3,6 +3,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import {
+  FiTarget,
+  FiUsers,
+  FiAward,
+  FiGlobe,
+  FiGift,
+  FiCheck,
+  FiArrowLeft,
+  FiAlertCircle,
+} from 'react-icons/fi';
+import { HiSparkles } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
 import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
 
@@ -12,44 +23,44 @@ const GOAL_TYPES = [
   {
     type: 'personal',
     title: 'Personal Goal',
-    icon: '🎯',
+    icon: FiTarget,
     desc: 'Solo journey private to you. Track your personal milestones and unlock rewards.',
     tag: 'Solo',
   },
   {
     type: 'collaborative',
     title: 'Collaborative Goal',
-    icon: '🤝',
+    icon: FiUsers,
     desc: 'Work together towards one shared target! Team members contribute to a joint goal. Join by invite or request.',
     tag: 'Teamwork',
   },
   {
     type: 'competitive',
     title: 'Competitive Goal',
-    icon: '🏆',
+    icon: FiAward,
     desc: 'Work individually and compete with friends! Live rankings & leaderboard show who leads the pack. Join by invite or request.',
     tag: 'Leaderboard',
   },
   {
     type: 'open',
     title: 'Open Goal',
-    icon: '🌐',
+    icon: FiGlobe,
     desc: 'Public challenge that anyone can join instantly. Disappears after deadline. Everyone sees everyone\'s progress.',
     tag: 'Public Event',
   },
 ] as const;
 
 const DEFAULT_REWARD_IDEAS = [
-  '☕ Premium specialty coffee treat',
-  '🎬 Watch a favorite movie / gaming session',
-  '🍕 Cheat meal celebration dinner',
-  '👟 Treat yourself to new fitness gear or shoes',
-  '📚 Buy a new book or course',
-  '💆 Relaxing massage / spa day',
-  '🎧 High quality headphones / accessory',
-  '🏖️ Weekend getaway / adventure day trip',
-  '🎂 Delicious dessert from top bakery',
-  '🎉 Big victory celebration party with friends',
+  'Premium specialty coffee treat',
+  'Watch a favorite movie / gaming session',
+  'Cheat meal celebration dinner',
+  'Treat yourself to new fitness gear or shoes',
+  'Buy a new book or course',
+  'Relaxing massage / spa day',
+  'High quality headphones / accessory',
+  'Weekend getaway / adventure day trip',
+  'Delicious dessert from top bakery',
+  'Big victory celebration party with friends',
 ];
 
 export default function NewGoalPage() {
@@ -205,7 +216,8 @@ export default function NewGoalPage() {
               fontWeight: 600,
             }}
           >
-            ← Back to Goals
+            <FiArrowLeft />
+            <span>Back to Goals</span>
           </Link>
           <h1
             style={{
@@ -250,6 +262,7 @@ export default function NewGoalPage() {
             >
               {GOAL_TYPES.map(gt => {
                 const isSelected = form.goalType === gt.type;
+                const Icon = gt.icon;
                 return (
                   <motion.div
                     key={gt.type}
@@ -268,7 +281,7 @@ export default function NewGoalPage() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 22 }}>{gt.icon}</span>
+                        <Icon style={{ fontSize: 20, color: 'var(--brand)' }} />
                         <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 15 }}>
                           {gt.title}
                         </span>
@@ -519,9 +532,13 @@ export default function NewGoalPage() {
                   fontWeight: 700,
                   cursor: 'pointer',
                   minHeight: 38,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                ✨ Auto-fill Ideas
+                <HiSparkles style={{ fontSize: 14 }} />
+                <span>Auto-fill Ideas</span>
               </button>
             </div>
 
@@ -619,8 +636,8 @@ export default function NewGoalPage() {
                     </div>
 
                     <div style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14 }}>
-                        🎁
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
+                        <FiGift style={{ fontSize: 16, color: 'var(--brand)' }} />
                       </span>
                       <input
                         type="text"
@@ -715,9 +732,13 @@ export default function NewGoalPage() {
                 color: '#f87171',
                 fontSize: 14,
                 fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
               }}
             >
-              ⚠️ {error}
+              <FiAlertCircle style={{ fontSize: 16 }} />
+              <span>{error}</span>
             </div>
           )}
 
@@ -770,9 +791,20 @@ export default function NewGoalPage() {
                 opacity: loading ? 0.7 : 1,
                 boxShadow: '0 4px 20px var(--neon-glow)',
                 minHeight: 46,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
               }}
             >
-              {loading ? 'Creating Journey...' : '🚀 Launch Goal & Begin Journey'}
+              {loading ? (
+                'Creating Journey...'
+              ) : (
+                <>
+                  <FiCheck style={{ fontSize: 16 }} />
+                  <span>Launch Goal & Begin Journey</span>
+                </>
+              )}
             </motion.button>
           </div>
         </form>

@@ -2,6 +2,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { AVATAR_CONFIGS } from './Avatar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiAward, FiLock } from 'react-icons/fi';
 
 export interface CheckpointRewardItem {
   checkpointIndex: number;
@@ -238,7 +239,7 @@ export default function GoalJourneyMap({
             const reached = fraction >= f;
             const milestoneVal = Math.round((target * ((i + 1) / numCheckpoints)) * 10) / 10;
             const label = `${milestoneVal}${unit}`;
-            const rewardText = rewards[i]?.reward || `Milestone ${i + 1} Reward 🎉`;
+            const rewardText = rewards[i]?.reward || `Milestone ${i + 1} Reward`;
             const labelY = p.y - 20;
 
             return (
@@ -281,9 +282,13 @@ export default function GoalJourneyMap({
                 />
 
                 {reached ? (
-                  <text x={p.x} y={labelY - 14} textAnchor="middle" fontSize="13">
-                    🎁
-                  </text>
+                  <g transform={`translate(${p.x - 6}, ${labelY - 24})`}>
+                    <polygon
+                      points="6,1 7.8,4.8 12,5.2 8.8,8.2 9.7,12.3 6,10.2 2.3,12.3 3.2,8.2 0,5.2 4.2,4.8"
+                      fill="#ffd166"
+                      filter="drop-shadow(0 0 6px #ffd166)"
+                    />
+                  </g>
                 ) : null}
 
                 {(numCheckpoints <= 10 || i % 2 === 0 || i === numCheckpoints - 1) && (
@@ -461,8 +466,12 @@ export default function GoalJourneyMap({
                   textAlign: 'center',
                 }}
               >
-                <div style={{ fontSize: 36, marginBottom: 8 }}>
-                  {activeModalReward.reached ? '🎉' : '🔒'}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  {activeModalReward.reached ? (
+                    <FiAward style={{ fontSize: 44, color: '#3fcf8e' }} />
+                  ) : (
+                    <FiLock style={{ fontSize: 44, color: '#f59e0b' }} />
+                  )}
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', marginBottom: 4 }}>
                   Checkpoint {activeModalReward.index} ({activeModalReward.value} {unit})

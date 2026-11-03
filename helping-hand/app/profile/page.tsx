@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { FiTarget, FiAward, FiMail, FiArrowLeft, FiCheck, FiUser } from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
 
 interface UserProfile {
@@ -185,7 +186,8 @@ export default function ProfilePage() {
               fontWeight: 600,
             }}
           >
-            ← Back to Goals
+            <FiArrowLeft />
+            <span>Back to Goals</span>
           </Link>
           <h1
             style={{
@@ -249,11 +251,11 @@ export default function ProfilePage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 22,
+                    fontSize: 20,
                     flexShrink: 0,
                   }}
                 >
-                  🚀
+                  <FiTarget />
                 </div>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)' }}>
@@ -284,11 +286,11 @@ export default function ProfilePage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 22,
+                    fontSize: 20,
                     flexShrink: 0,
                   }}
                 >
-                  🏆
+                  <FiAward />
                 </div>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)' }}>
@@ -319,11 +321,11 @@ export default function ProfilePage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 22,
+                    fontSize: 20,
                     flexShrink: 0,
                   }}
                 >
-                  📬
+                  <FiMail />
                 </div>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)' }}>

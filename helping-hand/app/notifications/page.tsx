@@ -2,6 +2,16 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FiArrowLeft,
+  FiMail,
+  FiInbox,
+  FiSend,
+  FiCheck,
+  FiClock,
+  FiArrowRight,
+  FiCheckCircle,
+} from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
 
 interface InvitedGoal {
@@ -86,7 +96,7 @@ export default function NotificationsPage() {
       const data = await res.json();
       if (res.ok) {
         setInvitations(prev => prev.filter(inv => inv._id !== goalId));
-        setActionSuccess(action === 'accept' ? '🎉 You have joined the goal!' : 'Invitation declined.');
+        setActionSuccess(action === 'accept' ? 'You have joined the goal!' : 'Invitation declined.');
         setTimeout(() => setActionSuccess(''), 3000);
       } else {
         alert(data.error || 'Failed to respond to invite');
@@ -106,7 +116,7 @@ export default function NotificationsPage() {
       const data = await res.json();
       if (res.ok) {
         setReceivedRequests(prev => prev.filter(r => r.memberId !== memberId));
-        setActionSuccess(action === 'accept' ? '✓ Request approved!' : 'Request declined.');
+        setActionSuccess(action === 'accept' ? 'Request approved!' : 'Request declined.');
         setTimeout(() => setActionSuccess(''), 3000);
       } else {
         alert(data.error || 'Failed to update request');
@@ -160,7 +170,8 @@ export default function NotificationsPage() {
               fontWeight: 600,
             }}
           >
-            ← Back to Goals
+            <FiArrowLeft />
+            <span>Back to Goals</span>
           </Link>
           <h1
             style={{
@@ -221,7 +232,7 @@ export default function NotificationsPage() {
               minHeight: 44,
             }}
           >
-            <span>✉️</span>
+            <FiMail style={{ fontSize: 16 }} />
             <span>Invitations Received</span>
             {invitations.length > 0 && (
               <span
@@ -258,7 +269,7 @@ export default function NotificationsPage() {
               minHeight: 44,
             }}
           >
-            <span>📥</span>
+            <FiInbox style={{ fontSize: 16 }} />
             <span>Requests on My Goals</span>
             {receivedRequests.length > 0 && (
               <span
@@ -295,7 +306,7 @@ export default function NotificationsPage() {
               minHeight: 44,
             }}
           >
-            <span>📤</span>
+            <FiSend style={{ fontSize: 16 }} />
             <span>My Sent Requests</span>
             {sentRequests.length > 0 && (
               <span
@@ -350,7 +361,9 @@ export default function NotificationsPage() {
                   border: '1px solid var(--line)',
                 }}
               >
-                <div style={{ fontSize: 40, marginBottom: 10 }}>📭</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  <FiMail style={{ fontSize: 40, color: 'var(--brand)' }} />
+                </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
                   No invitations right now
                 </h3>
@@ -426,9 +439,13 @@ export default function NotificationsPage() {
                           fontSize: 13.5,
                           cursor: 'pointer',
                           minHeight: 42,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
                         }}
                       >
-                        ✓ Accept & Join
+                        <FiCheck style={{ fontSize: 16 }} />
+                        <span>Accept & Join</span>
                       </button>
                       <button
                         type="button"
@@ -468,7 +485,9 @@ export default function NotificationsPage() {
                   border: '1px solid var(--line)',
                 }}
               >
-                <div style={{ fontSize: 40, marginBottom: 10 }}>✨</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  <FiCheckCircle style={{ fontSize: 40, color: 'var(--brand)' }} />
+                </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
                   No pending requests to approve
                 </h3>
@@ -536,9 +555,13 @@ export default function NotificationsPage() {
                           fontSize: 13.5,
                           cursor: 'pointer',
                           minHeight: 42,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
                         }}
                       >
-                        ✓ Approve Request
+                        <FiCheck style={{ fontSize: 16 }} />
+                        <span>Approve Request</span>
                       </button>
                       <button
                         type="button"
@@ -578,7 +601,9 @@ export default function NotificationsPage() {
                   border: '1px solid var(--line)',
                 }}
               >
-                <div style={{ fontSize: 40, marginBottom: 10 }}>📤</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  <FiSend style={{ fontSize: 40, color: 'var(--brand)' }} />
+                </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
                   No sent requests pending
                 </h3>
@@ -588,7 +613,9 @@ export default function NotificationsPage() {
                 <Link
                   href="/goals"
                   style={{
-                    display: 'inline-block',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
                     marginTop: 14,
                     background: 'var(--brand)',
                     color: '#fff',
@@ -599,7 +626,8 @@ export default function NotificationsPage() {
                     fontSize: 13.5,
                   }}
                 >
-                  Explore Public Goals →
+                  <span>Explore Public Goals</span>
+                  <FiArrowRight style={{ fontSize: 14 }} />
                 </Link>
               </div>
             ) : (
@@ -642,9 +670,13 @@ export default function NotificationsPage() {
                             borderRadius: 12,
                             background: 'rgba(245, 158, 11, 0.15)',
                             color: '#f59e0b',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
                           }}
                         >
-                          ⏳ Pending Approval
+                          <FiClock style={{ fontSize: 12 }} />
+                          <span>Pending Approval</span>
                         </span>
                       </div>
 
