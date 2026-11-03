@@ -1,11 +1,21 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Auth0Provider } from '@auth0/nextjs-auth0/client';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Helping Hand – Your personal growth companion',
-  description: 'Track your goals, build habits, and grow every day with Helping Hand.',
-  keywords: ['goal tracker', 'habit tracker', 'personal growth', 'productivity'],
+  title: 'Helping Hand – Your Personal Growth & Milestone Journey',
+  description: 'Track your goals, build habits, collaborate with friends, and unlock rewards on your interactive journey.',
+  keywords: ['goal tracker', 'habit tracker', 'personal growth', 'productivity', 'milestones', 'rewards'],
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#0d1015' },
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

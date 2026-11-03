@@ -319,3 +319,91 @@ body {
   border-radius: 50%;
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Responsive Utilities & Touch Helpers
+   ========================================================================== */
+
+/* Mobile / Tablet / Desktop visibility */
+.mobile-only-btn {
+  display: none !important;
+}
+.mobile-only {
+  display: none !important;
+}
+.desktop-only {
+  display: block !important;
+}
+
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+  .mobile-only-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-only {
+    display: block !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Horizontal scrollable tab row without ugly scrollbars */
+.tabs-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 6px;
+}
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch friendly minimum heights */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Responsive Grid helpers */
+.grid-responsive-2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .grid-responsive-2col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.grid-responsive-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .grid-responsive-hero {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+

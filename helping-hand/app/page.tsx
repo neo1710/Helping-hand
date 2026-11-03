@@ -189,7 +189,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.4, ease: 'easeOut' }}
-            style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}
+            style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}
           >
             <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }}>
               <Link
@@ -199,11 +199,15 @@ export default function HomePage() {
                   color: '#fff',
                   textDecoration: 'none',
                   borderRadius: 14,
-                  padding: '16px 36px',
+                  padding: '14px clamp(20px, 4vw, 36px)',
                   fontWeight: 700,
-                  fontSize: 16,
-                  display: 'flex', alignItems: 'center', gap: 10,
+                  fontSize: 'clamp(14px, 2vw, 16px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
                   boxShadow: '0 0 32px rgba(59,130,246,0.45)',
+                  minHeight: 48,
+                  justifyContent: 'center',
                 }}
               >
                 🚀 Create a Goal
@@ -218,11 +222,15 @@ export default function HomePage() {
                   color: 'var(--ink)',
                   textDecoration: 'none',
                   borderRadius: 14,
-                  padding: '16px 36px',
+                  padding: '14px clamp(20px, 4vw, 36px)',
                   fontWeight: 700,
-                  fontSize: 16,
+                  fontSize: 'clamp(14px, 2vw, 16px)',
                   border: '1px solid var(--line-strong)',
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  minHeight: 48,
+                  justifyContent: 'center',
                 }}
               >
                 👀 View Goals & Tracker
@@ -235,7 +243,7 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.9, delay: 0.6 }}
-            style={{ marginTop: 60, display: 'flex', justifyContent: 'center', gap: 48, flexWrap: 'wrap' }}
+            style={{ marginTop: 48, display: 'flex', justifyContent: 'center', gap: '20px 36px', flexWrap: 'wrap' }}
           >
             {[
               { val: '12K+', label: 'Goals Completed' },

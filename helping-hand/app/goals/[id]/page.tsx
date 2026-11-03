@@ -284,8 +284,8 @@ function GoalJourneyContent() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
         <Navbar />
-        <main style={{ maxWidth: 800, margin: '80px auto', textAlign: 'center', padding: '0 24px' }}>
-          <h2 style={{ fontSize: 24, marginBottom: 12 }}>{error || 'Goal not found'}</h2>
+        <main style={{ maxWidth: 800, margin: '60px auto', textAlign: 'center', padding: '0 20px' }}>
+          <h2 style={{ fontSize: 22, marginBottom: 12 }}>{error || 'Goal not found'}</h2>
           <Link
             href="/goals"
             style={{
@@ -293,7 +293,7 @@ function GoalJourneyContent() {
               marginTop: 16,
               background: 'var(--brand)',
               color: '#fff',
-              padding: '10px 24px',
+              padding: '11px 24px',
               borderRadius: 10,
               textDecoration: 'none',
               fontWeight: 700,
@@ -306,9 +306,6 @@ function GoalJourneyContent() {
     );
   }
 
-  // Active progress depends on goal type:
-  // - Collaborative & Personal: goal.progress
-  // - Competitive & Open: viewing member's personal progress (or goal progress if not member)
   const displayProgress = goal.goalType === 'competitive' || goal.goalType === 'open'
     ? userProgress
     : goal.progress;
@@ -318,7 +315,6 @@ function GoalJourneyContent() {
   const nowStr = new Date().toISOString();
   const daysRemaining = Math.max(0, daysBetween(nowStr, goal.endDate));
 
-  // Checkpoints list (4 to 20)
   const numCheckpoints = goal.checkpoints || 4;
   const checkpointsList = Array.from({ length: numCheckpoints }).map((_, i) => {
     const val = Math.round((goal.target * ((i + 1) / numCheckpoints)) * 10) / 10;
@@ -333,16 +329,30 @@ function GoalJourneyContent() {
   });
 
   const pendingRequests = goal.members?.filter(m => m.status === 'pending_approval') || [];
-  const invitedMembers = goal.members?.filter(m => m.status === 'invited') || [];
   const activeMembers = goal.members?.filter(m => m.status === 'active') || [];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
       <Navbar />
 
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px 100px' }}>
-        {/* Top Back & Admin Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+      <main
+        style={{
+          maxWidth: 1100,
+          margin: '0 auto',
+          padding: 'clamp(20px, 4vw, 40px) clamp(16px, 3vw, 24px) 80px',
+        }}
+      >
+        {/* Top Back & Action Row */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 24,
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
           <Link
             href="/goals"
             style={{
@@ -358,8 +368,7 @@ function GoalJourneyContent() {
             ← Back to all goals
           </Link>
 
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            {/* Non-member Join CTA */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             {membershipStatus === 'none' && !isCreator && (
               <motion.button
                 whileHover={{ scale: 1.03 }}
@@ -370,20 +379,21 @@ function GoalJourneyContent() {
                   background: 'var(--brand)',
                   color: '#fff',
                   border: 'none',
-                  padding: '9px 20px',
+                  padding: '9px 18px',
                   borderRadius: 10,
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 13.5,
                   cursor: isExpired ? 'not-allowed' : 'pointer',
                   opacity: isExpired ? 0.6 : 1,
                   boxShadow: '0 4px 14px var(--neon-glow)',
+                  minHeight: 40,
                 }}
               >
                 {joining
                   ? 'Joining...'
                   : goal.goalType === 'open'
-                  ? '🌐 Join This Open Goal'
-                  : '🤝 Request to Join Goal'}
+                  ? '🌐 Join Open Goal'
+                  : '🤝 Request to Join'}
               </motion.button>
             )}
 
@@ -392,28 +402,30 @@ function GoalJourneyContent() {
                 style={{
                   background: 'rgba(245, 158, 11, 0.15)',
                   color: '#f59e0b',
-                  padding: '6px 14px',
+                  padding: '6px 12px',
                   borderRadius: 20,
-                  fontSize: 13,
+                  fontSize: 12.5,
                   fontWeight: 700,
                 }}
               >
-                ⏳ Join Request Pending Approval
+                ⏳ Request Pending Approval
               </span>
             )}
 
             {membershipStatus === 'invited' && (
               <button
+                type="button"
                 onClick={() => handleMemberAction(goal.members.find(m => m.auth0Id === currentUserId)?._id || '', 'accept')}
                 style={{
                   background: '#3fcf8e',
                   color: '#fff',
                   border: 'none',
-                  padding: '8px 18px',
+                  padding: '8px 16px',
                   borderRadius: 10,
                   fontWeight: 700,
                   fontSize: 13,
                   cursor: 'pointer',
+                  minHeight: 40,
                 }}
               >
                 ✓ Accept Invitation
@@ -422,6 +434,7 @@ function GoalJourneyContent() {
 
             {isCreator && (
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={deleting}
                 style={{
@@ -429,10 +442,11 @@ function GoalJourneyContent() {
                   border: '1px solid rgba(239, 68, 68, 0.4)',
                   color: '#ef4444',
                   borderRadius: 10,
-                  padding: '8px 16px',
-                  fontSize: 13,
+                  padding: '7px 14px',
+                  fontSize: 12.5,
                   fontWeight: 600,
                   cursor: 'pointer',
+                  minHeight: 38,
                 }}
               >
                 {deleting ? 'Deleting...' : 'Delete Goal'}
@@ -445,161 +459,196 @@ function GoalJourneyContent() {
         <AnimatePresence>
           {unlockedRewardAlert && (
             <motion.div
-              initial={{ opacity: 0, y: -16 }}
+              initial={{ opacity: 0, y: -14 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
+              exit={{ opacity: 0, y: -14 }}
               style={{
                 background: 'linear-gradient(135deg, #10b981, #059669)',
                 color: '#fff',
-                padding: '16px 24px',
+                padding: '14px 18px',
                 borderRadius: 16,
-                marginBottom: 24,
-                boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
+                marginBottom: 20,
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: 12,
+                flexWrap: 'wrap',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 28 }}>🏆</span>
-                <span style={{ fontSize: 16, fontWeight: 800 }}>{unlockedRewardAlert}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 24 }}>🏆</span>
+                <span style={{ fontSize: 14, fontWeight: 800 }}>{unlockedRewardAlert}</span>
               </div>
               <button
+                type="button"
                 onClick={() => setUnlockedRewardAlert(null)}
                 style={{
                   background: 'rgba(255,255,255,0.2)',
                   border: 'none',
                   color: '#fff',
                   borderRadius: 8,
-                  padding: '6px 12px',
+                  padding: '5px 10px',
                   fontWeight: 700,
+                  fontSize: 12,
                   cursor: 'pointer',
                 }}
               >
-                ✕ Close
+                ✕ Dismiss
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Hero Banner */}
+        {/* Hero Banner (Responsive 2-col or stacked) */}
         <div
           style={{
             background: 'var(--surface)',
             border: '1px solid var(--line)',
             borderRadius: 20,
-            padding: 32,
-            marginBottom: 32,
+            padding: 'clamp(18px, 3.5vw, 28px)',
+            marginBottom: 28,
             display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 24,
+            flexDirection: 'column',
+            gap: 20,
           }}
         >
-          <div style={{ flex: 1, minWidth: 280 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  padding: '4px 12px',
-                  borderRadius: 20,
-                  background: 'var(--brand-soft)',
-                  color: 'var(--brand)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                {goal.goalType} Goal
-              </span>
-
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  padding: '4px 12px',
-                  borderRadius: 20,
-                  background: goal.status === 'completed' ? 'rgba(63, 207, 142, 0.15)' : 'rgba(255,255,255,0.06)',
-                  color: goal.status === 'completed' ? '#3fcf8e' : 'var(--ink-muted)',
-                }}
-              >
-                {goal.status}
-              </span>
-
-              {isExpired && (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: 16,
+            }}
+          >
+            <div style={{ flex: '1 1 280px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                 <span
                   style={{
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: 700,
-                    padding: '4px 12px',
+                    padding: '3px 10px',
                     borderRadius: 20,
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    color: '#f87171',
+                    background: 'var(--brand-soft)',
+                    color: 'var(--brand)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
                   }}
                 >
-                  Deadline Expired
+                  {goal.goalType} Goal
                 </span>
+
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                    background: goal.status === 'completed' ? 'rgba(63, 207, 142, 0.15)' : 'rgba(255,255,255,0.06)',
+                    color: goal.status === 'completed' ? '#3fcf8e' : 'var(--ink-muted)',
+                  }}
+                >
+                  {goal.status}
+                </span>
+
+                {isExpired && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: '#f87171',
+                    }}
+                  >
+                    Deadline Expired
+                  </span>
+                )}
+
+                <span style={{ color: 'var(--ink-muted)', fontSize: 12.5 }}>
+                  {formatDate(goal.startDate)} – {formatDate(goal.endDate)}
+                </span>
+              </div>
+
+              <h1
+                style={{
+                  fontSize: 'clamp(22px, 4.5vw, 32px)',
+                  fontWeight: 800,
+                  margin: '0 0 8px',
+                  color: 'var(--ink)',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {goal.name}
+              </h1>
+
+              {goal.description && (
+                <p style={{ color: 'var(--ink-muted)', fontSize: 13.5, margin: '0 0 10px', lineHeight: 1.5 }}>
+                  {goal.description}
+                </p>
               )}
 
-              <span style={{ color: 'var(--ink-muted)', fontSize: 13 }}>
-                {formatDate(goal.startDate)} – {formatDate(goal.endDate)}
-              </span>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 13, color: 'var(--ink-muted)' }}>
+                <span>
+                  Target: <strong style={{ color: 'var(--ink)' }}>{goal.target} {goal.unit}</strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Days Remaining: <strong style={{ color: 'var(--ink)' }}>{daysRemaining} of {daysTotal}</strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Creator: <strong style={{ color: 'var(--brand)' }}>@{goal.creator?.username || 'user'}</strong>
+                </span>
+              </div>
             </div>
 
-            <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, margin: '0 0 10px', color: 'var(--ink)' }}>
-              {goal.name}
-            </h1>
-
-            {goal.description && (
-              <p style={{ color: 'var(--ink-muted)', fontSize: 14, margin: '0 0 12px', lineHeight: 1.5 }}>
-                {goal.description}
-              </p>
-            )}
-
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 14, color: 'var(--ink-muted)' }}>
-              <span>
-                Target: <strong style={{ color: 'var(--ink)' }}>{goal.target} {goal.unit}</strong>
-              </span>
-              <span>•</span>
-              <span>
-                Days Remaining: <strong style={{ color: 'var(--ink)' }}>{daysRemaining} of {daysTotal}</strong>
-              </span>
-              <span>•</span>
-              <span>
-                Created by: <strong style={{ color: 'var(--brand)' }}>@{goal.creator?.username || 'user'}</strong>
-              </span>
-            </div>
-          </div>
-
-          <div style={{ textAlign: 'right', minWidth: 200 }}>
-            <div style={{ fontSize: 44, fontWeight: 900, color: 'var(--brand)', lineHeight: 1 }}>
-              {pct}%
-            </div>
-            <div style={{ color: 'var(--ink-muted)', fontSize: 14, marginTop: 4 }}>
-              {displayProgress} / {goal.target} {goal.unit}
-              {goal.goalType === 'competitive' || goal.goalType === 'open' ? ' (Your personal progress)' : ' (Overall goal progress)'}
-            </div>
+            {/* Percentage & Progress Bar Block */}
             <div
               style={{
+                flex: '1 1 200px',
+                textAlign: 'left',
                 background: 'var(--bg)',
-                borderRadius: 10,
-                height: 10,
-                width: '100%',
-                marginTop: 12,
-                overflow: 'hidden',
+                padding: '16px 18px',
+                borderRadius: 14,
                 border: '1px solid var(--line)',
               }}
             >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 'clamp(28px, 6vw, 38px)', fontWeight: 900, color: 'var(--brand)', lineHeight: 1 }}>
+                  {pct}%
+                </span>
+                <span style={{ color: 'var(--ink-muted)', fontSize: 13, fontWeight: 600 }}>
+                  {displayProgress} / {goal.target} {goal.unit}
+                </span>
+              </div>
+
+              <div style={{ color: 'var(--ink-subtle)', fontSize: 11.5, marginTop: 4 }}>
+                {goal.goalType === 'competitive' || goal.goalType === 'open' ? 'Your personal progress' : 'Overall goal progress'}
+              </div>
+
               <div
                 style={{
-                  background: 'linear-gradient(90deg, var(--brand), #60a5fa)',
-                  width: `${pct}%`,
-                  height: '100%',
-                  borderRadius: 10,
-                  transition: 'width 0.6s ease',
+                  background: 'var(--surface-raised)',
+                  borderRadius: 8,
+                  height: 8,
+                  width: '100%',
+                  marginTop: 10,
+                  overflow: 'hidden',
                 }}
-              />
+              >
+                <div
+                  style={{
+                    background: 'linear-gradient(90deg, var(--brand), #60a5fa)',
+                    width: `${pct}%`,
+                    height: '100%',
+                    borderRadius: 8,
+                    transition: 'width 0.6s ease',
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -610,26 +659,26 @@ function GoalJourneyContent() {
             background: 'var(--surface)',
             border: '1px solid var(--line)',
             borderRadius: 20,
-            padding: 28,
-            marginBottom: 32,
+            padding: 'clamp(16px, 3vw, 24px)',
+            marginBottom: 28,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
+              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
                 Roadmap & Milestones
               </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 14, margin: '4px 0 0' }}>
-                Follow your journey along the road. Click on any checkpoint marker to inspect its designated reward!
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, margin: '2px 0 0' }}>
+                Follow your journey along the road. Tap on any checkpoint pin to inspect its designated reward!
               </p>
             </div>
             <span
               style={{
                 background: 'var(--brand-soft)',
                 color: 'var(--brand)',
-                padding: '4px 14px',
+                padding: '3px 12px',
                 borderRadius: 20,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 700,
               }}
             >
@@ -648,21 +697,21 @@ function GoalJourneyContent() {
           />
         </div>
 
-        {/* ── 4 to 20 Checkpoints & Rewards Interactive Showcase ── */}
+        {/* ── Checkpoints & Rewards Grid (1 to 3 columns responsively) ── */}
         <div
           style={{
             background: 'var(--surface)',
             border: '1px solid var(--line)',
             borderRadius: 20,
-            padding: 28,
-            marginBottom: 32,
+            padding: 'clamp(18px, 3vw, 26px)',
+            marginBottom: 28,
           }}
         >
-          <div style={{ marginBottom: 20 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>🎁</span> Checkpoints & Rewards ({numCheckpoints} Milestones)
             </h2>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 14, marginTop: 4 }}>
+            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
               As you log progress towards your target, checkpoints automatically unlock and reveal your designated rewards.
             </p>
           </div>
@@ -670,8 +719,8 @@ function GoalJourneyContent() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 14,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 250px), 1fr))',
+              gap: 12,
             }}
           >
             {checkpointsList.map(cp => (
@@ -679,19 +728,19 @@ function GoalJourneyContent() {
                 key={cp.index}
                 style={{
                   background: cp.isReached ? 'rgba(63, 207, 142, 0.08)' : 'var(--bg)',
-                  borderRadius: 16,
-                  padding: '16px 18px',
+                  borderRadius: 14,
+                  padding: '14px 16px',
                   border: `1.5px solid ${cp.isReached ? '#3fcf8e' : 'var(--line)'}`,
                   position: 'relative',
                   transition: 'all 0.2s ease',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 800,
-                      padding: '3px 10px',
+                      padding: '2px 9px',
                       borderRadius: 12,
                       background: cp.isReached ? '#3fcf8e' : 'var(--line)',
                       color: cp.isReached ? '#fff' : 'var(--ink-muted)',
@@ -700,16 +749,16 @@ function GoalJourneyContent() {
                     Checkpoint {cp.index}
                   </span>
 
-                  <span style={{ fontSize: 13, fontWeight: 700, color: cp.isReached ? '#3fcf8e' : 'var(--ink)' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: cp.isReached ? '#3fcf8e' : 'var(--ink)' }}>
                     {cp.value} {goal.unit}
                   </span>
                 </div>
 
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 4, wordBreak: 'break-word' }}>
                   {cp.reward}
                 </div>
 
-                <div style={{ fontSize: 12, color: cp.isReached ? '#3fcf8e' : 'var(--ink-muted)', fontWeight: 600 }}>
+                <div style={{ fontSize: 11.5, color: cp.isReached ? '#3fcf8e' : 'var(--ink-muted)', fontWeight: 600 }}>
                   {cp.isReached ? '✓ Unlocked! Enjoy your reward' : `🔒 Needs ${(Math.max(0, cp.value - displayProgress)).toFixed(1)} ${goal.unit} more`}
                 </div>
               </div>
@@ -717,27 +766,27 @@ function GoalJourneyContent() {
           </div>
         </div>
 
-        {/* ── Competitive Leaderboard or Collaborative Team Overview ── */}
+        {/* ── Competitive Leaderboard ── */}
         {goal.goalType === 'competitive' && (
           <div
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--line)',
               borderRadius: 20,
-              padding: 28,
-              marginBottom: 32,
+              padding: 'clamp(18px, 3vw, 26px)',
+              marginBottom: 28,
             }}
           >
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>🏆</span> Competition Leaderboard & Rankings
+            <div style={{ marginBottom: 16 }}>
+              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>🏆</span> Competition Leaderboard & Standings
               </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 14, marginTop: 4 }}>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
                 Real-time competitor standings. Log your progress to climb the leaderboard!
               </p>
             </div>
 
-            <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gap: 8 }}>
               {rankings.map((r, idx) => {
                 const rankBadge = idx === 0 ? '🥇 1st' : idx === 1 ? '🥈 2nd' : idx === 2 ? '🥉 3rd' : `#${idx + 1}`;
                 const isMe = r.userId === currentUserId || r.username === currentUsername;
@@ -748,33 +797,33 @@ function GoalJourneyContent() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '14px 20px',
+                      padding: '12px 16px',
                       background: isMe ? 'var(--brand-soft)' : 'var(--bg)',
-                      borderRadius: 14,
+                      borderRadius: 12,
                       border: `1.5px solid ${isMe ? 'var(--brand)' : 'var(--line)'}`,
                       flexWrap: 'wrap',
-                      gap: 12,
+                      gap: 8,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, minWidth: 50, color: 'var(--brand)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, minWidth: 46, color: 'var(--brand)' }}>
                         {rankBadge}
                       </span>
                       <div>
-                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 15 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
                           {r.name} {isMe && '(You)'}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>
                           @{r.username}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16 }}>
+                      <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14 }}>
                         {r.progress} {goal.unit}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 700 }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--brand)', fontWeight: 700 }}>
                         {r.percentage}% of target
                       </div>
                     </div>
@@ -785,26 +834,33 @@ function GoalJourneyContent() {
           </div>
         )}
 
+        {/* ── Collaborative Team Members ── */}
         {goal.goalType === 'collaborative' && (
           <div
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--line)',
               borderRadius: 20,
-              padding: 28,
-              marginBottom: 32,
+              padding: 'clamp(18px, 3vw, 26px)',
+              marginBottom: 28,
             }}
           >
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ marginBottom: 16 }}>
+              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>🤝</span> Collaborative Team Members
               </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 14, marginTop: 4 }}>
-                All active members contribute together to reach the goal target of {goal.target} {goal.unit}.
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
+                All active members contribute together to reach the target of {goal.target} {goal.unit}.
               </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+                gap: 12,
+              }}
+            >
               {activeMembers.map(m => {
                 const u = m.user;
                 const isMe = m.auth0Id === currentUserId;
@@ -814,19 +870,19 @@ function GoalJourneyContent() {
                     style={{
                       background: 'var(--bg)',
                       borderRadius: 14,
-                      padding: '16px',
+                      padding: '14px 16px',
                       border: '1px solid var(--line)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 15 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
                         {u?.name || 'Member'} {isMe && '(You)'}
                       </span>
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: 10.5,
                           fontWeight: 700,
-                          padding: '2px 8px',
+                          padding: '2px 7px',
                           borderRadius: 12,
                           background: m.role === 'creator' ? 'var(--brand-soft)' : 'var(--surface)',
                           color: m.role === 'creator' ? 'var(--brand)' : 'var(--ink-muted)',
@@ -835,10 +891,10 @@ function GoalJourneyContent() {
                         {m.role}
                       </span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--brand)', marginBottom: 8 }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--brand)', marginBottom: 6 }}>
                       @{u?.username || 'member'}
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>
                       Contributed: <strong style={{ color: 'var(--ink)' }}>{m.progress} {goal.unit}</strong>
                     </div>
                   </div>
@@ -848,31 +904,30 @@ function GoalJourneyContent() {
           </div>
         )}
 
-        {/* ── Creator Invites & Join Requests Management ── */}
+        {/* ── Creator Invites & Requests Management ── */}
         {isCreator && goal.goalType !== 'personal' && (
           <div
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--line)',
               borderRadius: 20,
-              padding: 28,
-              marginBottom: 32,
+              padding: 'clamp(18px, 3vw, 26px)',
+              marginBottom: 28,
               display: 'grid',
-              gap: 24,
+              gap: 18,
             }}
           >
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>⚡</span> Goal Admin & Member Invitations
               </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 14, marginTop: 4 }}>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
                 Invite users by their unique username (@username) or approve incoming join requests.
               </p>
             </div>
 
-            {/* Invite Form */}
-            <form onSubmit={handleInviteUser} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
+            <form onSubmit={handleInviteUser} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', flex: '1 1 220px' }}>
                 <span
                   style={{
                     position: 'absolute',
@@ -892,13 +947,14 @@ function GoalJourneyContent() {
                   onChange={e => setInviteUsername(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px 14px 12px 34px',
+                    padding: '11px 14px 11px 34px',
                     borderRadius: 12,
                     border: '1.5px solid var(--line)',
                     background: 'var(--bg)',
                     color: 'var(--ink)',
                     fontSize: 14,
                     outline: 'none',
+                    minHeight: 44,
                   }}
                 />
               </div>
@@ -910,12 +966,14 @@ function GoalJourneyContent() {
                   background: 'var(--brand)',
                   color: '#fff',
                   border: 'none',
-                  padding: '12px 24px',
+                  padding: '11px 20px',
                   borderRadius: 12,
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 13.5,
                   cursor: inviting ? 'not-allowed' : 'pointer',
                   opacity: inviting ? 0.7 : 1,
+                  minHeight: 44,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {inviting ? 'Sending...' : 'Send Invite'}
@@ -928,13 +986,12 @@ function GoalJourneyContent() {
               </div>
             )}
 
-            {/* Pending Requests to Join */}
             {pendingRequests.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--line)', paddingTop: 18 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>
+              <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>
                   Pending Join Requests ({pendingRequests.length})
                 </h3>
-                <div style={{ display: 'grid', gap: 10 }}>
+                <div style={{ display: 'grid', gap: 8 }}>
                   {pendingRequests.map(req => (
                     <div
                       key={req._id}
@@ -943,24 +1000,25 @@ function GoalJourneyContent() {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         background: 'var(--bg)',
-                        padding: '12px 18px',
+                        padding: '10px 14px',
                         borderRadius: 12,
                         border: '1px solid var(--line)',
                         flexWrap: 'wrap',
-                        gap: 12,
+                        gap: 10,
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>
                           {req.user?.name || 'User'}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--brand)' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--brand)' }}>
                           @{req.user?.username || 'user'}
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button
+                          type="button"
                           onClick={() => handleMemberAction(req._id, 'accept')}
                           style={{
                             background: '#3fcf8e',
@@ -969,13 +1027,15 @@ function GoalJourneyContent() {
                             padding: '6px 14px',
                             borderRadius: 8,
                             fontWeight: 700,
-                            fontSize: 13,
+                            fontSize: 12.5,
                             cursor: 'pointer',
+                            minHeight: 36,
                           }}
                         >
                           Accept
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleMemberAction(req._id, 'reject')}
                           style={{
                             background: 'transparent',
@@ -984,8 +1044,9 @@ function GoalJourneyContent() {
                             padding: '6px 12px',
                             borderRadius: 8,
                             fontWeight: 600,
-                            fontSize: 13,
+                            fontSize: 12.5,
                             cursor: 'pointer',
+                            minHeight: 36,
                           }}
                         >
                           Decline
@@ -1000,25 +1061,32 @@ function GoalJourneyContent() {
         )}
 
         {/* ── Progress Logging & History Cards ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 20 }}>
           {/* Progress Logger */}
           <div
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--line)',
               borderRadius: 20,
-              padding: 28,
+              padding: 'clamp(18px, 3vw, 26px)',
             }}
           >
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--ink)' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4, color: 'var(--ink)' }}>
               Log Your Progress
             </h3>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 18 }}>
+            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 16 }}>
               Advance along the roadmap and unlock rewards as you hit checkpoints!
             </p>
 
-            {/* Quick buttons */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            {/* Quick 4-button touch grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
               {[1, 5, 10, 25].map(inc => (
                 <button
                   key={inc}
@@ -1026,16 +1094,16 @@ function GoalJourneyContent() {
                   onClick={() => handleLog(inc)}
                   disabled={logging || goal.status === 'completed' || isExpired}
                   style={{
-                    flex: 1,
-                    minWidth: 60,
-                    padding: '9px 12px',
+                    padding: '10px 4px',
                     background: 'var(--bg)',
                     border: '1px solid var(--line)',
                     borderRadius: 10,
                     color: 'var(--ink)',
-                    fontSize: 13,
+                    fontSize: 12.5,
                     fontWeight: 700,
                     cursor: 'pointer',
+                    minHeight: 44,
+                    textAlign: 'center',
                   }}
                 >
                   +{inc} {goal.unit}
@@ -1043,7 +1111,7 @@ function GoalJourneyContent() {
               ))}
             </div>
 
-            {/* Custom Amount */}
+            {/* Custom Amount Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>
@@ -1059,13 +1127,14 @@ function GoalJourneyContent() {
                   disabled={logging || goal.status === 'completed' || isExpired}
                   style={{
                     width: '100%',
-                    padding: '12px 14px',
+                    padding: '11px 14px',
                     borderRadius: 10,
                     border: '1.5px solid var(--line)',
                     background: 'var(--bg)',
                     color: 'var(--ink)',
                     fontSize: 15,
                     outline: 'none',
+                    minHeight: 44,
                   }}
                 />
               </div>
@@ -1082,13 +1151,14 @@ function GoalJourneyContent() {
                   disabled={logging || goal.status === 'completed' || isExpired}
                   style={{
                     width: '100%',
-                    padding: '12px 14px',
+                    padding: '11px 14px',
                     borderRadius: 10,
                     border: '1.5px solid var(--line)',
                     background: 'var(--bg)',
                     color: 'var(--ink)',
                     fontSize: 14,
                     outline: 'none',
+                    minHeight: 44,
                   }}
                 />
               </div>
@@ -1103,14 +1173,15 @@ function GoalJourneyContent() {
                   background: 'var(--brand)',
                   color: '#fff',
                   border: 'none',
-                  padding: '14px',
+                  padding: '13px',
                   borderRadius: 12,
                   fontWeight: 800,
-                  fontSize: 15,
+                  fontSize: 14.5,
                   cursor: logging || !amount ? 'not-allowed' : 'pointer',
                   opacity: logging || !amount ? 0.6 : 1,
                   boxShadow: '0 4px 14px var(--neon-glow)',
-                  marginTop: 6,
+                  marginTop: 4,
+                  minHeight: 46,
                 }}
               >
                 {logging ? 'Recording...' : 'Log Progress'}
@@ -1124,19 +1195,19 @@ function GoalJourneyContent() {
               background: 'var(--surface)',
               border: '1px solid var(--line)',
               borderRadius: 20,
-              padding: 28,
+              padding: 'clamp(18px, 3vw, 26px)',
             }}
           >
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--ink)' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4, color: 'var(--ink)' }}>
               Activity History
             </h3>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 18 }}>
-              Recent logs and milestone achievements.
+            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 16 }}>
+              Recent progress and milestones achieved.
             </p>
 
-            <div style={{ maxHeight: 320, overflowY: 'auto', display: 'grid', gap: 10 }}>
+            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'grid', gap: 8 }}>
               {(!goal.log || goal.log.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-muted)', fontSize: 14 }}>
+                <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--ink-muted)', fontSize: 13.5 }}>
                   No progress logged yet. Make your first entry above!
                 </div>
               ) : (
@@ -1147,28 +1218,30 @@ function GoalJourneyContent() {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: '10px 14px',
+                      padding: '10px 12px',
                       background: 'var(--bg)',
-                      borderRadius: 12,
+                      borderRadius: 10,
                       border: '1px solid var(--line)',
+                      gap: 8,
+                      flexWrap: 'wrap',
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>
                         +{entry.amount} {goal.unit}
                         {entry.username && (
-                          <span style={{ fontSize: 12, color: 'var(--brand)', marginLeft: 8 }}>
+                          <span style={{ fontSize: 11.5, color: 'var(--brand)', marginLeft: 6 }}>
                             @{entry.username}
                           </span>
                         )}
                       </div>
                       {entry.note && (
-                        <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginTop: 2 }}>
                           {entry.note}
                         </div>
                       )}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>
                       {formatDate(entry.date)}
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import ThemeToggle from './ThemeToggle';
@@ -8,6 +8,20 @@ import ThemeToggle from './ThemeToggle';
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, isLoading } = useUser();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/notifications')
+      .then(async r => {
+        if (r.ok) {
+          const data = await r.json();
+          if (typeof data.pendingActionCount === 'number') {
+            setPendingCount(data.pendingActionCount);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <nav
@@ -18,33 +32,60 @@ export default function Navbar() {
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        padding: '0 24px',
+        padding: '0 clamp(16px, 3vw, 24px)',
       }}
     >
-      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 64,
+          gap: 12,
+        }}
+      >
         {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <Link
+          href="/"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            textDecoration: 'none',
+            flexShrink: 0,
+          }}
+        >
           <motion.span
             whileHover={{ rotate: [0, -10, 10, -5, 0], scale: 1.15 }}
             transition={{ duration: 0.5 }}
-            style={{ fontSize: 28, display: 'inline-block', cursor: 'pointer' }}
+            style={{ fontSize: 26, display: 'inline-block', cursor: 'pointer' }}
           >
             ✋
           </motion.span>
-          <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--ink)', letterSpacing: '-0.5px' }}>
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize: 'clamp(17px, 3.5vw, 20px)',
+              color: 'var(--ink)',
+              letterSpacing: '-0.5px',
+            }}
+          >
             Helping<span style={{ color: 'var(--brand)', textShadow: '0 0 12px var(--neon-glow)' }}>Hand</span>
           </span>
         </Link>
 
         {/* Desktop Nav */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="hidden-mobile">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }} className="hidden-mobile">
           {[
             { href: '/goals', label: 'Goals' },
             { href: '/goals/new', label: 'New Goal' },
+            { href: '/notifications', label: 'Notifications', badge: pendingCount },
             { href: '/profile', label: 'Profile' },
             { href: '/#features', label: 'Features' },
             { href: '/#how-it-works', label: 'How It Works' },
-          ].map(({ href, label }) => (
+          ].map(({ href, label, badge }) => (
             <Link
               key={label}
               href={href}
@@ -54,6 +95,9 @@ export default function Navbar() {
                 fontSize: 14,
                 fontWeight: 600,
                 transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement;
@@ -66,18 +110,71 @@ export default function Navbar() {
                 el.style.transform = 'translateY(0)';
               }}
             >
-              {label}
+              <span>{label}</span>
+              {badge !== undefined && badge > 0 && (
+                <span
+                  style={{
+                    background: '#ef4444',
+                    color: '#fff',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    padding: '1px 6px',
+                    lineHeight: '16px',
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
             </Link>
           ))}
         </div>
 
         {/* Right side controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {/* Notification bell on mobile or top right */}
+          <Link
+            href="/notifications"
+            className="mobile-only"
+            style={{
+              position: 'relative',
+              textDecoration: 'none',
+              padding: '6px',
+              borderRadius: 8,
+              color: 'var(--ink)',
+              fontSize: 18,
+            }}
+            title="Notifications"
+          >
+            🔔
+            {pendingCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  background: '#ef4444',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  width: 16,
+                  height: 16,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {pendingCount}
+              </span>
+            )}
+          </Link>
+
           <ThemeToggle />
 
-          {/* Auth0 User profile or Login button */}
+          {/* User profile or Login */}
           {!isLoading && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Link
                 href="/profile"
                 style={{
@@ -86,6 +183,8 @@ export default function Navbar() {
                   gap: 8,
                   textDecoration: 'none',
                   color: 'inherit',
+                  padding: '4px',
+                  borderRadius: 20,
                 }}
                 title="View & Edit Profile"
               >
@@ -119,13 +218,25 @@ export default function Navbar() {
                     {(user.name || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="hidden-mobile" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                <span
+                  className="hidden-mobile"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--ink)',
+                    maxWidth: 120,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {user.name || user.email}
                 </span>
               </Link>
 
               <a
                 href="/auth/logout"
+                className="hidden-mobile"
                 style={{
                   color: 'var(--ink-subtle)',
                   textDecoration: 'none',
@@ -159,25 +270,16 @@ export default function Navbar() {
                   textDecoration: 'none',
                   fontSize: 13,
                   fontWeight: 600,
-                  padding: '7px 14px',
+                  padding: '7px 12px',
                   borderRadius: 8,
                   border: '1px solid var(--line)',
                   transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget;
-                  el.style.color = 'var(--brand)';
-                  el.style.borderColor = 'var(--brand)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget;
-                  el.style.color = 'var(--ink-muted)';
-                  el.style.borderColor = 'var(--line)';
+                  whiteSpace: 'nowrap',
                 }}
               >
                 Log In
               </a>
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="hidden-mobile">
                 <Link
                   href="/goals"
                   style={{
@@ -185,13 +287,14 @@ export default function Navbar() {
                     color: '#fff',
                     textDecoration: 'none',
                     borderRadius: 9,
-                    padding: '8px 18px',
+                    padding: '8px 16px',
                     fontWeight: 700,
                     fontSize: 13,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
                     boxShadow: '0 0 16px var(--neon-glow)',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   Get Started →
@@ -204,15 +307,15 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="mobile-only-btn"
+            className="mobile-only-btn touch-target"
             style={{
               background: 'transparent',
               border: '1px solid var(--line)',
               borderRadius: 8,
-              padding: '6px 10px',
+              padding: '8px 12px',
               color: 'var(--ink)',
               cursor: 'pointer',
-              fontSize: 18,
+              fontSize: 20,
             }}
             aria-label="Toggle navigation menu"
           >
@@ -231,19 +334,20 @@ export default function Navbar() {
             transition={{ duration: 0.25 }}
             style={{
               borderTop: '1px solid var(--line)',
-              padding: '16px 0 20px',
+              padding: '16px 0 24px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
+              gap: 8,
             }}
           >
             {[
-              { href: '/goals', label: 'Goals' },
-              { href: '/goals/new', label: 'Set New Goal' },
-              { href: '/profile', label: 'Profile & Settings' },
-              { href: '/#features', label: 'Features' },
-              { href: '/#how-it-works', label: 'How It Works' },
-            ].map(({ href, label }) => (
+              { href: '/goals', label: '🎯 All Goals' },
+              { href: '/goals/new', label: '➕ Create New Goal' },
+              { href: '/notifications', label: '🔔 Notifications', badge: pendingCount },
+              { href: '/profile', label: '👤 Profile & Settings' },
+              { href: '/#features', label: '✨ Features' },
+              { href: '/#how-it-works', label: '🗺️ How It Works' },
+            ].map(({ href, label, badge }) => (
               <Link
                 key={label}
                 href={href}
@@ -253,23 +357,74 @@ export default function Navbar() {
                   textDecoration: 'none',
                   fontSize: 15,
                   fontWeight: 600,
-                  padding: '8px 0',
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'var(--surface-raised)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                {label}
+                <span>{label}</span>
+                {badge !== undefined && badge > 0 && (
+                  <span
+                    style={{
+                      background: '#ef4444',
+                      color: '#fff',
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                    }}
+                  >
+                    {badge} new
+                  </span>
+                )}
               </Link>
             ))}
+
+            {user ? (
+              <a
+                href="/auth/logout"
+                style={{
+                  color: '#ef4444',
+                  textDecoration: 'none',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginTop: 6,
+                }}
+              >
+                🚪 Log Out
+              </a>
+            ) : (
+              <a
+                href="/auth/login"
+                style={{
+                  color: 'var(--brand)',
+                  textDecoration: 'none',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: '1px solid var(--brand)',
+                  background: 'var(--brand-soft)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginTop: 6,
+                }}
+              >
+                🔑 Log In
+              </a>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-
-      <style>{`
-        .mobile-only-btn { display: none; }
-        @media (max-width: 768px) {
-          .hidden-mobile { display: none !important; }
-          .mobile-only-btn { display: block !important; }
-        }
-      `}</style>
     </nav>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
 
@@ -33,12 +34,19 @@ interface Goal {
   log: { amount: number; note: string; date: string }[];
 }
 
-const TAB_OPTIONS = [
-  { id: 'all', label: 'All Goals', icon: '🌟' },
-  { id: 'my', label: 'My Journeys', icon: '👤' },
+const MY_SUBTABS = [
+  { id: 'all', label: 'All My Goals', icon: '✨' },
+  { id: 'personal', label: 'Personal', icon: '🎯' },
   { id: 'collaborative', label: 'Collaborative', icon: '🤝' },
   { id: 'competitive', label: 'Competitive', icon: '🏆' },
+  { id: 'open', label: 'Open Joined', icon: '🌐' },
+];
+
+const PUBLIC_SUBTABS = [
+  { id: 'all', label: 'All Public', icon: '🌟' },
   { id: 'open', label: 'Open Challenges', icon: '🌐' },
+  { id: 'collaborative', label: 'Collaborative', icon: '🤝' },
+  { id: 'competitive', label: 'Competitive', icon: '🏆' },
 ];
 
 function getStatus(goal: Goal): { label: string; color: string } {
@@ -63,15 +71,20 @@ function getStatus(goal: Goal): { label: string; color: string } {
 }
 
 export default function GoalsPage() {
+  const router = useRouter();
+  const [parentTab, setParentTab] = useState<'my' | 'public'>('my');
+  const [subTab, setSubTab] = useState('all');
+
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [activeTab, setActiveTab] = useState('all');
+  const [currentUserId, setCurrentUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentUserId, setCurrentUserId] = useState('');
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [joinSuccessToast, setJoinSuccessToast] = useState('');
 
-  const fetchGoals = (type = 'all') => {
+  const fetchGoals = (parent: 'my' | 'public', subtype: string) => {
     setLoading(true);
-    fetch(`/api/goals?type=${type}`)
+    fetch(`/api/goals?parent=${parent}&subtype=${subtype}`)
       .then(async r => {
         const data = await r.json();
         if (!r.ok) {
@@ -89,35 +102,94 @@ export default function GoalsPage() {
   };
 
   useEffect(() => {
-    fetchGoals(activeTab);
-  }, [activeTab]);
+    fetchGoals(parentTab, subTab);
+  }, [parentTab, subTab]);
+
+  const handleParentTabChange = (newParent: 'my' | 'public') => {
+    setParentTab(newParent);
+    setSubTab('all');
+  };
+
+  const handleQuickJoin = async (goal: Goal) => {
+    setJoiningId(goal._id);
+    try {
+      const res = await fetch(`/api/goals/${goal._id}/join`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        if (goal.goalType === 'open') {
+          setJoinSuccessToast(`🎉 You joined "${goal.name}"! Moved to My Goals.`);
+          setTimeout(() => {
+            setJoinSuccessToast('');
+            router.push(`/goals/${goal._id}`);
+          }, 1500);
+        } else {
+          setJoinSuccessToast(data.message || 'Request sent to creator!');
+          setTimeout(() => setJoinSuccessToast(''), 3000);
+          fetchGoals(parentTab, subTab);
+        }
+      } else {
+        alert(data.error || 'Failed to join goal');
+      }
+    } catch {
+      alert('Error joining goal');
+    } finally {
+      setJoiningId(null);
+    }
+  };
+
+  const currentSubtabs = parentTab === 'my' ? MY_SUBTABS : PUBLIC_SUBTABS;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
 
-      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px 100px' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36, flexWrap: 'wrap', gap: 16 }}>
+      <main
+        style={{
+          maxWidth: 1200,
+          margin: '0 auto',
+          padding: 'clamp(24px, 4vw, 48px) clamp(16px, 3vw, 24px) 80px',
+        }}
+      >
+        {/* Header Row */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 28,
+            flexWrap: 'wrap',
+            gap: 16,
+          }}
+        >
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.4 }}
           >
-            <h1 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 800, color: 'var(--ink)', letterSpacing: '-1px', marginBottom: 8 }}>
+            <h1
+              style={{
+                fontSize: 'clamp(26px, 5vw, 40px)',
+                fontWeight: 800,
+                color: 'var(--ink)',
+                letterSpacing: '-1px',
+                marginBottom: 6,
+              }}
+            >
               Goal Journeys
             </h1>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 16 }}>
-              Personal milestones, team collaboration, friendly competitions, and open challenges.
+            <p style={{ color: 'var(--ink-muted)', fontSize: 'clamp(14px, 2vw, 16px)' }}>
+              {parentTab === 'my'
+                ? 'Your active personal milestones and joined team challenges.'
+                : 'Discover public open challenges, team goals, and competitions to join.'}
             </p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
+            transition={{ duration: 0.4 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
             <Link
               href="/goals/new"
@@ -126,13 +198,15 @@ export default function GoalsPage() {
                 color: '#fff',
                 textDecoration: 'none',
                 borderRadius: 12,
-                padding: '12px 24px',
+                padding: '12px 20px',
                 fontWeight: 700,
-                fontSize: 15,
-                display: 'flex',
+                fontSize: 14,
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
                 boxShadow: '0 0 24px var(--neon-glow)',
+                whiteSpace: 'nowrap',
+                minHeight: 44,
               }}
             >
               + Create New Goal
@@ -140,36 +214,118 @@ export default function GoalsPage() {
           </motion.div>
         </div>
 
-        {/* Tab Filters */}
+        {/* Join Success Toast */}
+        <AnimatePresence>
+          {joinSuccessToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              style={{
+                background: 'rgba(63, 207, 142, 0.15)',
+                border: '1.5px solid #3fcf8e',
+                color: '#3fcf8e',
+                padding: '12px 18px',
+                borderRadius: 12,
+                fontWeight: 700,
+                fontSize: 14,
+                marginBottom: 20,
+              }}
+            >
+              {joinSuccessToast}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── PARENT TABS: MY GOALS vs PUBLIC GOALS ── */}
         <div
           style={{
-            display: 'flex',
-            gap: 10,
-            overflowX: 'auto',
-            paddingBottom: 8,
-            marginBottom: 36,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            background: 'var(--surface)',
+            padding: 6,
+            borderRadius: 16,
+            border: '1px solid var(--line)',
+            marginBottom: 20,
+            maxWidth: 480,
           }}
         >
-          {TAB_OPTIONS.map(tab => {
-            const isActive = activeTab === tab.id;
+          <button
+            type="button"
+            onClick={() => handleParentTabChange('my')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: 'none',
+              background: parentTab === 'my' ? 'var(--brand)' : 'transparent',
+              color: parentTab === 'my' ? '#fff' : 'var(--ink-muted)',
+              fontWeight: 800,
+              fontSize: 'clamp(14px, 3vw, 15px)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.25s ease',
+              boxShadow: parentTab === 'my' ? '0 4px 16px var(--neon-glow)' : 'none',
+              minHeight: 44,
+            }}
+          >
+            <span>👤</span>
+            <span>My Goals</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleParentTabChange('public')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: 'none',
+              background: parentTab === 'public' ? 'var(--brand)' : 'transparent',
+              color: parentTab === 'public' ? '#fff' : 'var(--ink-muted)',
+              fontWeight: 800,
+              fontSize: 'clamp(14px, 3vw, 15px)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.25s ease',
+              boxShadow: parentTab === 'public' ? '0 4px 16px var(--neon-glow)' : 'none',
+              minHeight: 44,
+            }}
+          >
+            <span>🌐</span>
+            <span>Public Goals</span>
+          </button>
+        </div>
+
+        {/* ── SUB-TABS CATEGORIZATION ── */}
+        <div className="tabs-scroll" style={{ marginBottom: 28 }}>
+          {currentSubtabs.map(tab => {
+            const isActive = subTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                type="button"
+                onClick={() => setSubTab(tab.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  padding: '10px 18px',
+                  padding: '8px 16px',
                   borderRadius: 12,
                   border: `1.5px solid ${isActive ? 'var(--brand)' : 'var(--line)'}`,
                   background: isActive ? 'var(--brand-soft)' : 'var(--surface)',
                   color: isActive ? 'var(--brand)' : 'var(--ink-muted)',
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 13.5,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   transition: 'all 0.2s ease',
+                  minHeight: 38,
                 }}
               >
                 <span>{tab.icon}</span>
@@ -183,12 +339,12 @@ export default function GoalsPage() {
         {error && (
           <div
             style={{
-              padding: '16px 20px',
+              padding: '14px 18px',
               borderRadius: 12,
               background: 'rgba(239, 68, 68, 0.1)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               color: '#f87171',
-              marginBottom: 32,
+              marginBottom: 24,
               fontSize: 14,
             }}
           >
@@ -198,13 +354,13 @@ export default function GoalsPage() {
 
         {/* Loading Spinner */}
         {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 0.9, ease: 'linear' }}
               style={{
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 borderRadius: '50%',
                 border: '3px solid var(--line)',
                 borderTopColor: 'var(--brand)',
@@ -218,34 +374,64 @@ export default function GoalsPage() {
           <div
             style={{
               textAlign: 'center',
-              padding: '80px 24px',
+              padding: '60px 20px',
               background: 'var(--surface)',
               borderRadius: 20,
               border: '1px solid var(--line)',
             }}
           >
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🗺️</div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', marginBottom: 8 }}>
-              No goals found in this view
+            <div style={{ fontSize: 44, marginBottom: 14 }}>
+              {parentTab === 'my' ? '🗺️' : '🌐'}
+            </div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', marginBottom: 8 }}>
+              {parentTab === 'my'
+                ? 'No active journeys in your My Goals yet'
+                : 'No public goals found in this category'}
             </h2>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 15, maxWidth: 460, margin: '0 auto 24px' }}>
-              Create your first personal milestone, set up a collaborative team challenge, or join open community goals.
+            <p style={{ color: 'var(--ink-muted)', fontSize: 14, maxWidth: 460, margin: '0 auto 20px' }}>
+              {parentTab === 'my'
+                ? 'Create a new personal journey or explore Public Goals to join collaborative and open challenges!'
+                : 'You have either joined all current challenges or none are open right now. Be the first to create one!'}
             </p>
-            <Link
-              href="/goals/new"
-              style={{
-                background: 'var(--brand)',
-                color: '#fff',
-                padding: '12px 24px',
-                borderRadius: 12,
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: 14,
-                display: 'inline-block',
-              }}
-            >
-              + Create Your First Goal
-            </Link>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {parentTab === 'my' && (
+                <button
+                  type="button"
+                  onClick={() => handleParentTabChange('public')}
+                  style={{
+                    background: 'var(--surface-raised)',
+                    color: 'var(--ink)',
+                    border: '1px solid var(--line)',
+                    padding: '11px 20px',
+                    borderRadius: 12,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    minHeight: 44,
+                  }}
+                >
+                  Explore Public Goals →
+                </button>
+              )}
+              <Link
+                href="/goals/new"
+                style={{
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  padding: '11px 22px',
+                  borderRadius: 12,
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  display: 'inline-block',
+                  minHeight: 44,
+                  lineHeight: '22px',
+                }}
+              >
+                + Create New Goal
+              </Link>
+            </div>
           </div>
         )}
 
@@ -254,8 +440,8 @@ export default function GoalsPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-              gap: 24,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 310px), 1fr))',
+              gap: 20,
             }}
           >
             {goals.map((goal, idx) => {
@@ -263,8 +449,13 @@ export default function GoalsPage() {
               const pct = goal.target > 0 ? Math.min(100, Math.round((goal.progress / goal.target) * 100)) : 0;
               const daysLeft = Math.max(0, Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
               const av = AVATAR_CONFIGS[goal.avatarIndex] || AVATAR_CONFIGS[0];
-              const memberCount = goal.members?.filter(m => m.status === 'active').length || 1;
+              const activeMembers = goal.members?.filter(m => m.status === 'active') || [];
+              const memberCount = activeMembers.length || 1;
               const numCheckpoints = goal.checkpoints || 4;
+
+              const isPending = goal.members?.some(
+                m => m.auth0Id === currentUserId && m.status === 'pending_approval'
+              );
 
               const goalTypeIcon =
                 goal.goalType === 'collaborative'
@@ -278,15 +469,15 @@ export default function GoalsPage() {
               return (
                 <motion.div
                   key={goal._id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05, duration: 0.35 }}
+                  transition={{ delay: idx * 0.04, duration: 0.3 }}
                   whileHover={{ y: -4, boxShadow: '0 12px 32px rgba(0,0,0,0.3)' }}
                   style={{
                     background: 'var(--surface)',
-                    borderRadius: 20,
+                    borderRadius: 18,
                     border: '1px solid var(--line)',
-                    padding: 24,
+                    padding: 'clamp(18px, 3vw, 24px)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -296,18 +487,18 @@ export default function GoalsPage() {
                 >
                   <div>
                     {/* Top Badge Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: 700,
-                          padding: '3px 10px',
+                          padding: '3px 9px',
                           borderRadius: 20,
                           background: 'var(--brand-soft)',
                           color: 'var(--brand)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 5,
+                          gap: 4,
                           textTransform: 'capitalize',
                         }}
                       >
@@ -317,9 +508,9 @@ export default function GoalsPage() {
 
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: 700,
-                          padding: '3px 10px',
+                          padding: '3px 9px',
                           borderRadius: 20,
                           background: 'var(--bg)',
                           color: statusInfo.color,
@@ -330,18 +521,19 @@ export default function GoalsPage() {
                       </span>
                     </div>
 
-                    {/* Goal Title & Creator */}
+                    {/* Goal Title */}
                     <Link
                       href={`/goals/${goal._id}`}
                       style={{ textDecoration: 'none', color: 'inherit' }}
                     >
                       <h2
                         style={{
-                          fontSize: 20,
+                          fontSize: 'clamp(17px, 3vw, 19px)',
                           fontWeight: 800,
                           color: 'var(--ink)',
-                          marginBottom: 6,
+                          marginBottom: 4,
                           letterSpacing: '-0.3px',
+                          wordBreak: 'break-word',
                         }}
                       >
                         {goal.name}
@@ -349,7 +541,7 @@ export default function GoalsPage() {
                     </Link>
 
                     {goal.creator?.username && (
-                      <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 10 }}>
                         by <span style={{ color: 'var(--brand)', fontWeight: 600 }}>@{goal.creator.username}</span>
                       </div>
                     )}
@@ -359,7 +551,7 @@ export default function GoalsPage() {
                         style={{
                           fontSize: 13,
                           color: 'var(--ink-muted)',
-                          marginBottom: 16,
+                          marginBottom: 14,
                           lineHeight: 1.45,
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
@@ -376,24 +568,24 @@ export default function GoalsPage() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
+                        gap: 6,
                         background: 'var(--bg)',
-                        padding: '8px 12px',
+                        padding: '7px 10px',
                         borderRadius: 10,
                         border: '1px solid var(--line)',
-                        marginBottom: 18,
+                        marginBottom: 16,
                         fontSize: 12,
                         color: 'var(--ink)',
                         fontWeight: 600,
                       }}
                     >
                       <span>🎁</span>
-                      <span>{numCheckpoints} Checkpoints & Custom Rewards</span>
+                      <span>{numCheckpoints} Checkpoints & Rewards</span>
                     </div>
 
                     {/* Progress Bar */}
                     <div style={{ marginBottom: 14 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
                         <span style={{ color: 'var(--ink-muted)' }}>Progress</span>
                         <strong style={{ color: 'var(--ink)' }}>
                           {goal.progress} / {goal.target} {goal.unit} ({pct}%)
@@ -403,7 +595,7 @@ export default function GoalsPage() {
                         style={{
                           background: 'var(--bg)',
                           borderRadius: 8,
-                          height: 8,
+                          height: 7,
                           width: '100%',
                           overflow: 'hidden',
                           border: '1px solid var(--line)',
@@ -422,32 +614,76 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  {/* Footer Card Info & Action */}
-                  <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14, marginTop: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar config={av} size={32} />
-                        <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
-                          {goal.goalType !== 'personal' ? `${memberCount} participant${memberCount > 1 ? 's' : ''}` : 'Solo Journey'}
+                  {/* Card Footer */}
+                  <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Avatar config={av} size={30} />
+                        <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
+                          <div>{goal.goalType !== 'personal' ? `${memberCount} participant${memberCount > 1 ? 's' : ''}` : 'Solo Journey'}</div>
                           <div>{daysLeft} days left</div>
                         </div>
                       </div>
 
-                      <Link
-                        href={`/goals/${goal._id}`}
-                        style={{
-                          background: 'var(--brand-soft)',
-                          color: 'var(--brand)',
-                          textDecoration: 'none',
-                          padding: '7px 14px',
-                          borderRadius: 10,
-                          fontWeight: 700,
-                          fontSize: 13,
-                          transition: 'all 0.2s',
-                        }}
-                      >
-                        View Journey →
-                      </Link>
+                      {/* Dynamic CTA depending on parent tab */}
+                      {parentTab === 'my' ? (
+                        <Link
+                          href={`/goals/${goal._id}`}
+                          style={{
+                            background: 'var(--brand-soft)',
+                            color: 'var(--brand)',
+                            textDecoration: 'none',
+                            padding: '7px 12px',
+                            borderRadius: 9,
+                            fontWeight: 700,
+                            fontSize: 12,
+                            whiteSpace: 'nowrap',
+                            minHeight: 36,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          View Road →
+                        </Link>
+                      ) : isPending ? (
+                        <span
+                          style={{
+                            background: 'rgba(245, 158, 11, 0.15)',
+                            color: '#f59e0b',
+                            padding: '6px 10px',
+                            borderRadius: 8,
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                          }}
+                        >
+                          ⏳ Pending
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickJoin(goal)}
+                          disabled={joiningId === goal._id}
+                          style={{
+                            background: goal.goalType === 'open' ? 'var(--brand)' : 'var(--brand-soft)',
+                            color: goal.goalType === 'open' ? '#fff' : 'var(--brand)',
+                            border: 'none',
+                            padding: '7px 14px',
+                            borderRadius: 9,
+                            fontWeight: 700,
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            minHeight: 36,
+                            boxShadow: goal.goalType === 'open' ? '0 0 12px var(--neon-glow)' : 'none',
+                          }}
+                        >
+                          {joiningId === goal._id
+                            ? 'Joining...'
+                            : goal.goalType === 'open'
+                            ? '🌐 Join Now'
+                            : '🤝 Request to Join'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

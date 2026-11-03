@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Goal, { ICheckpointReward } from '@/lib/models/Goal';
-import '@/lib/models/User'; // Ensure User model is registered
+import '@/lib/models/User';
 import { getOrCreateCurrentUser } from '@/lib/userHelper';
 
 export async function GET(req: NextRequest) {
@@ -9,57 +9,130 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const currentUser = await getOrCreateCurrentUser();
     const { searchParams } = new URL(req.url);
-    const filterType = searchParams.get('type') || 'all';
+
+    const parent = searchParams.get('parent') || ''; // 'my' | 'public' | ''
+    const subtype = searchParams.get('subtype') || searchParams.get('type') || 'all';
 
     const now = new Date();
 
-    // Base query conditions depending on filterType
     let query: Record<string, unknown> = {};
 
-    if (filterType === 'personal') {
-      query = {
-        goalType: 'personal',
+    if (parent === 'my') {
+      // "My Goals": ONLY goals where user is creator OR an ACTIVE member
+      // Until user joins any public goal, it will NEVER appear in the "my" section!
+      const userIsMemberOrCreator = {
         $or: [
           { creator: currentUser._id },
           { creatorUserId: currentUser.auth0Id },
           { userId: currentUser.auth0Id },
-          { userId: 'demo-user-local' },
+          {
+            members: {
+              $elemMatch: {
+                auth0Id: currentUser.auth0Id,
+                status: 'active',
+              },
+            },
+          },
         ],
       };
-    } else if (filterType === 'collaborative') {
-      query = { goalType: 'collaborative' };
-    } else if (filterType === 'competitive') {
-      query = { goalType: 'competitive' };
-    } else if (filterType === 'open') {
-      // Open goals disappear after deadline!
-      query = {
-        goalType: 'open',
-        endDate: { $gte: now },
-      };
-    } else if (filterType === 'my') {
-      // Goals where the user is creator or an active member
-      query = {
+
+      if (subtype && subtype !== 'all') {
+        query = {
+          $and: [
+            userIsMemberOrCreator,
+            { goalType: subtype },
+          ],
+        };
+      } else {
+        query = userIsMemberOrCreator;
+      }
+    } else if (parent === 'public') {
+      // "Public Goals": Available public goals (collaborative, competitive, open)
+      // EXCLUDES personal goals, EXCLUDES expired open goals, and
+      // EXCLUDES goals where the current user is ALREADY an active member (since those belong in "My Goals")!
+      const isPublicType = {
         $or: [
-          { creator: currentUser._id },
-          { creatorUserId: currentUser.auth0Id },
-          { userId: currentUser.auth0Id },
-          { 'members.auth0Id': currentUser.auth0Id },
-        ],
-      };
-    } else {
-      // 'all' tab:
-      // Show user's personal/active goals + public/shared goals
-      // Hide expired open goals unless user was part of them
-      query = {
-        $or: [
-          { creator: currentUser._id },
-          { creatorUserId: currentUser.auth0Id },
-          { userId: currentUser.auth0Id },
-          { 'members.auth0Id': currentUser.auth0Id },
           { goalType: { $in: ['collaborative', 'competitive'] } },
           { goalType: 'open', endDate: { $gte: now } },
         ],
       };
+
+      // Not created by current user and not already joined by current user as active
+      const notJoinedYet = {
+        creator: { $ne: currentUser._id },
+        creatorUserId: { $ne: currentUser.auth0Id },
+        userId: { $ne: currentUser.auth0Id },
+        members: {
+          $not: {
+            $elemMatch: {
+              auth0Id: currentUser.auth0Id,
+              status: 'active',
+            },
+          },
+        },
+      };
+
+      if (subtype && subtype !== 'all') {
+        query = {
+          $and: [
+            isPublicType,
+            notJoinedYet,
+            { goalType: subtype },
+          ],
+        };
+      } else {
+        query = {
+          $and: [
+            isPublicType,
+            notJoinedYet,
+          ],
+        };
+      }
+    } else {
+      // Default / fallback
+      if (subtype === 'personal') {
+        query = {
+          goalType: 'personal',
+          $or: [
+            { creator: currentUser._id },
+            { creatorUserId: currentUser.auth0Id },
+            { userId: currentUser.auth0Id },
+          ],
+        };
+      } else if (subtype === 'collaborative') {
+        query = { goalType: 'collaborative' };
+      } else if (subtype === 'competitive') {
+        query = { goalType: 'competitive' };
+      } else if (subtype === 'open') {
+        query = { goalType: 'open', endDate: { $gte: now } };
+      } else if (subtype === 'my') {
+        query = {
+          $or: [
+            { creator: currentUser._id },
+            { creatorUserId: currentUser.auth0Id },
+            { userId: currentUser.auth0Id },
+            {
+              members: {
+                $elemMatch: {
+                  auth0Id: currentUser.auth0Id,
+                  status: 'active',
+                },
+              },
+            },
+          ],
+        };
+      } else {
+        query = {
+          $or: [
+            { creator: currentUser._id },
+            { creatorUserId: currentUser.auth0Id },
+            { userId: currentUser.auth0Id },
+            { 'members.auth0Id': currentUser.auth0Id },
+            { goalType: { $in: ['collaborative', 'competitive'] } },
+            { goalType: 'open', endDate: { $gte: now } },
+          ],
+        };
+      }
     }
 
     const goals = await Goal.find(query)
@@ -118,7 +191,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Deadline must be after start date.' }, { status: 400 });
     }
 
-    // Build rewards array (from 1 to checkpoints)
     const formattedRewards: ICheckpointReward[] = [];
     for (let i = 1; i <= parsedCheckpoints; i++) {
       const milestoneValue = Math.round((parsedTarget * (i / parsedCheckpoints)) * 100) / 100;
@@ -130,7 +202,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create Goal document with the creator as the first active member
     const goal = await Goal.create({
       creator: currentUser._id,
       creatorUserId: currentUser.auth0Id,
@@ -172,7 +243,6 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    // Populate creator and members
     const populatedGoal = await Goal.findById(goal._id)
       .populate('creator', 'username name picture')
       .populate('members.user', 'username name picture')
