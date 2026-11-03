@@ -10,14 +10,29 @@ import {
   FiGlobe,
   FiGift,
   FiCheck,
+  FiCheckCircle,
   FiArrowLeft,
   FiAlertCircle,
+  FiMinus,
+  FiPlus,
+  FiCalendar,
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
 import Avatar, { AVATAR_CONFIGS } from '@/components/Avatar';
 
-const UNITS = ['km', 'miles', 'hours', 'books', 'sessions', '₹', 'steps', 'pages', 'reps', 'kg'];
+const UNITS = ['km', 'hours', 'books', 'sessions', '₹', 'steps', 'pages', 'reps', 'kg'];
+
+const DEADLINE_PRESETS = [
+  { label: '+7 Days', days: 7 },
+  { label: '+14 Days', days: 14 },
+  { label: '+30 Days', days: 30 },
+  { label: '+60 Days', days: 60 },
+  { label: '+90 Days', days: 90 },
+  { label: '+1 Year', days: 365 },
+];
+
+const CHECKPOINT_PRESETS = [4, 6, 8, 10, 12, 16, 20];
 
 const GOAL_TYPES = [
   {
@@ -31,21 +46,21 @@ const GOAL_TYPES = [
     type: 'collaborative',
     title: 'Collaborative Goal',
     icon: FiUsers,
-    desc: 'Work together towards one shared target! Team members contribute to a joint goal. Join by invite or request.',
+    desc: 'Work together towards one shared target! Team members contribute together.',
     tag: 'Teamwork',
   },
   {
     type: 'competitive',
     title: 'Competitive Goal',
     icon: FiAward,
-    desc: 'Work individually and compete with friends! Live rankings & leaderboard show who leads the pack. Join by invite or request.',
+    desc: 'Compete individually with friends! Live rankings & leaderboard show who leads.',
     tag: 'Leaderboard',
   },
   {
     type: 'open',
     title: 'Open Goal',
     icon: FiGlobe,
-    desc: 'Public challenge that anyone can join instantly. Disappears after deadline. Everyone sees everyone\'s progress.',
+    desc: 'Public challenge anyone can join instantly. Disappears after deadline.',
     tag: 'Public Event',
   },
 ] as const;
@@ -124,6 +139,20 @@ export default function NewGoalPage() {
     setRewards(filled);
   };
 
+  const setDeadlineDays = (days: number) => {
+    const base = form.startDate ? new Date(form.startDate) : new Date();
+    const target = new Date(base);
+    target.setDate(base.getDate() + days);
+    setForm(f => ({ ...f, endDate: target.toISOString().split('T')[0] }));
+  };
+
+  const handleStepCheckpoints = (delta: number) => {
+    setForm(f => ({
+      ...f,
+      checkpoints: Math.min(20, Math.max(4, f.checkpoints + delta)),
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -196,13 +225,13 @@ export default function NewGoalPage() {
 
       <main
         style={{
-          maxWidth: 920,
+          maxWidth: 860,
           margin: '0 auto',
-          padding: 'clamp(20px, 4vw, 48px) clamp(16px, 3vw, 24px) 100px',
+          padding: 'clamp(16px, 3.5vw, 40px) clamp(12px, 3vw, 24px) 100px',
         }}
       >
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 24 }}>
           <Link
             href="/goals"
             style={{
@@ -212,7 +241,7 @@ export default function NewGoalPage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              marginBottom: 14,
+              marginBottom: 10,
               fontWeight: 600,
             }}
           >
@@ -221,71 +250,100 @@ export default function NewGoalPage() {
           </Link>
           <h1
             style={{
-              fontSize: 'clamp(26px, 5vw, 38px)',
+              fontSize: 'clamp(24px, 5vw, 36px)',
               fontWeight: 800,
               color: 'var(--ink)',
               letterSpacing: '-1px',
+              lineHeight: 1.2,
             }}
           >
             Create a New Goal
           </h1>
-          <p style={{ color: 'var(--ink-muted)', marginTop: 6, fontSize: 'clamp(14px, 2vw, 16px)' }}>
+          <p style={{ color: 'var(--ink-muted)', marginTop: 6, fontSize: 'clamp(13.5px, 2vw, 15px)' }}>
             Choose your goal type, customize 4 to 20 milestone rewards, and begin your journey.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 24 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
           {/* 1. Goal Type Selection */}
-          <div
-            style={{
-              background: 'var(--surface)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 28px)',
-              border: '1px solid var(--line)',
-            }}
-          >
-            <div style={{ marginBottom: 16 }}>
+          <div className="form-card">
+            <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontWeight: 800, color: 'var(--ink)', fontSize: 16 }}>
                 1. Select Goal Type <span style={{ color: 'var(--brand)' }}>*</span>
               </label>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
-                Choose whether this goal is personal, team collaborative, competitive, or an open public challenge.
+              <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, marginTop: 4 }}>
+                Choose personal solo, team collaborative, competitive rankings, or open public challenge.
               </p>
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))',
-                gap: 12,
-              }}
-            >
+            <div className="grid-responsive-2col">
               {GOAL_TYPES.map(gt => {
                 const isSelected = form.goalType === gt.type;
                 const Icon = gt.icon;
                 return (
                   <motion.div
                     key={gt.type}
-                    whileHover={{ scale: 1.015 }}
-                    whileTap={{ scale: 0.985 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                     onClick={() => setForm(f => ({ ...f, goalType: gt.type }))}
                     style={{
-                      padding: '16px 14px',
+                      padding: '14px 16px',
                       borderRadius: 14,
                       border: `2px solid ${isSelected ? 'var(--brand)' : 'var(--line)'}`,
                       background: isSelected ? 'var(--brand-soft)' : 'var(--bg)',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 8,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Icon style={{ fontSize: 20, color: 'var(--brand)' }} />
-                        <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 15 }}>
-                          {gt.title}
-                        </span>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 10,
+                              background: isSelected ? 'var(--brand)' : 'var(--surface-raised)',
+                              color: isSelected ? '#fff' : 'var(--brand)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 16,
+                            }}
+                          >
+                            <Icon />
+                          </div>
+                          <span style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 15 }}>
+                            {gt.title}
+                          </span>
+                        </div>
+
+                        {isSelected ? (
+                          <FiCheckCircle style={{ color: 'var(--brand)', fontSize: 18, flexShrink: 0 }} />
+                        ) : (
+                          <div
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: '50%',
+                              border: '1.5px solid var(--line-strong)',
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
                       </div>
+
+                      <p style={{ fontSize: 12.5, color: 'var(--ink-muted)', lineHeight: 1.45 }}>
+                        {gt.desc}
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                       <span
                         style={{
                           fontSize: 10.5,
@@ -299,9 +357,6 @@ export default function NewGoalPage() {
                         {gt.tag}
                       </span>
                     </div>
-                    <p style={{ fontSize: 12.5, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-                      {gt.desc}
-                    </p>
                   </motion.div>
                 );
               })}
@@ -309,23 +364,14 @@ export default function NewGoalPage() {
           </div>
 
           {/* 2. Goal Details */}
-          <div
-            style={{
-              background: 'var(--surface)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 28px)',
-              border: '1px solid var(--line)',
-              display: 'grid',
-              gap: 18,
-            }}
-          >
+          <div className="form-card" style={{ display: 'grid', gap: 16 }}>
             <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16 }}>
               2. Goal Details & Schedule
             </h2>
 
             {/* Goal Name */}
             <div>
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 8, fontSize: 14 }}>
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 6, fontSize: 13.5 }}>
                 Goal Name <span style={{ color: 'var(--brand)' }}>*</span>
               </label>
               <input
@@ -344,13 +390,14 @@ export default function NewGoalPage() {
                   color: 'var(--ink)',
                   fontSize: 15,
                   outline: 'none',
+                  minHeight: 46,
                 }}
               />
             </div>
 
             {/* Description */}
             <div>
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 8, fontSize: 14 }}>
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 6, fontSize: 13.5 }}>
                 Description & Purpose (Optional)
               </label>
               <textarea
@@ -373,11 +420,11 @@ export default function NewGoalPage() {
               />
             </div>
 
-            {/* Target & Unit (Responsive 1 or 2 cols) */}
+            {/* Target & Unit */}
             <div className="grid-responsive-2col">
               <div>
-                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 8, fontSize: 14 }}>
-                  Target Value <span style={{ color: 'var(--brand)' }}>*</span>
+                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 6, fontSize: 13.5 }}>
+                  Target Metric Value <span style={{ color: 'var(--brand)' }}>*</span>
                 </label>
                 <input
                   type="number"
@@ -396,60 +443,73 @@ export default function NewGoalPage() {
                     color: 'var(--ink)',
                     fontSize: 15,
                     outline: 'none',
+                    minHeight: 46,
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 8, fontSize: 14 }}>
-                  Unit <span style={{ color: 'var(--brand)' }}>*</span>
+                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 6, fontSize: 13.5 }}>
+                  Unit of Measurement <span style={{ color: 'var(--brand)' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={form.unit}
-                    onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
-                    placeholder="km"
-                    style={{
-                      flex: 1,
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: '1.5px solid var(--line)',
-                      background: 'var(--bg)',
-                      color: 'var(--ink)',
-                      fontSize: 15,
-                      outline: 'none',
-                    }}
-                  />
-                  <select
-                    value={UNITS.includes(form.unit) ? form.unit : ''}
-                    onChange={e => {
-                      if (e.target.value) setForm(f => ({ ...f, unit: e.target.value }));
-                    }}
-                    style={{
-                      padding: '12px 10px',
-                      borderRadius: 12,
-                      border: '1.5px solid var(--line)',
-                      background: 'var(--bg)',
-                      color: 'var(--ink)',
-                      fontSize: 14,
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="">Presets</option>
-                    {UNITS.map(u => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
-                  </select>
-                </div>
+                <input
+                  type="text"
+                  value={form.unit}
+                  onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
+                  placeholder="e.g. km, books, hours"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    border: '1.5px solid var(--line)',
+                    background: 'var(--bg)',
+                    color: 'var(--ink)',
+                    fontSize: 15,
+                    outline: 'none',
+                    minHeight: 46,
+                  }}
+                />
               </div>
             </div>
 
-            {/* Dates (Responsive 1 or 2 cols) */}
+            {/* Quick Unit Selector Pills */}
+            <div>
+              <span style={{ fontSize: 12, color: 'var(--ink-muted)', display: 'block', marginBottom: 6 }}>
+                Quick unit presets:
+              </span>
+              <div className="chip-row">
+                {UNITS.map(u => {
+                  const isActive = form.unit.toLowerCase() === u.toLowerCase();
+                  return (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, unit: u }))}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 20,
+                        border: `1px solid ${isActive ? 'var(--brand)' : 'var(--line)'}`,
+                        background: isActive ? 'var(--brand)' : 'var(--surface-raised)',
+                        color: isActive ? '#fff' : 'var(--ink-muted)',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {u}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Dates */}
             <div className="grid-responsive-2col">
               <div>
-                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 8, fontSize: 14 }}>
+                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 6, fontSize: 13.5 }}>
                   Start Date
                 </label>
                 <input
@@ -466,12 +526,13 @@ export default function NewGoalPage() {
                     color: 'var(--ink)',
                     fontSize: 14,
                     outline: 'none',
+                    minHeight: 46,
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 8, fontSize: 14 }}>
+                <label style={{ display: 'block', fontWeight: 700, color: 'var(--ink)', marginBottom: 6, fontSize: 13.5 }}>
                   Deadline Date <span style={{ color: 'var(--brand)' }}>*</span>
                 </label>
                 <input
@@ -488,34 +549,62 @@ export default function NewGoalPage() {
                     color: 'var(--ink)',
                     fontSize: 14,
                     outline: 'none',
+                    minHeight: 46,
                   }}
                 />
               </div>
             </div>
 
+            {/* Quick Deadline Pills */}
+            <div>
+              <span style={{ fontSize: 12, color: 'var(--ink-muted)', display: 'block', marginBottom: 6 }}>
+                Quick deadline presets from start date:
+              </span>
+              <div className="chip-row">
+                {DEADLINE_PRESETS.map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => setDeadlineDays(p.days)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 20,
+                      border: '1px solid var(--line)',
+                      background: 'var(--surface-raised)',
+                      color: 'var(--ink-muted)',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <FiCalendar style={{ fontSize: 11 }} />
+                    <span>{p.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {form.goalType === 'open' && (
               <p style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '10px 14px', borderRadius: 10, lineHeight: 1.45 }}>
-                ⚡ Note: Open challenges automatically disappear from the active feed once this deadline passes!
+                Note: Open challenges automatically disappear from the active feed once this deadline passes!
               </p>
             )}
           </div>
 
           {/* 3. Checkpoints & Rewards Configuration */}
-          <div
-            style={{
-              background: 'var(--surface)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 28px)',
-              border: '1px solid var(--line)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+          <div className="form-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
               <div>
                 <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16 }}>
-                  3. Checkpoints & Rewards (4 to 20 Milestones)
+                  3. Checkpoints & Rewards
                 </h2>
-                <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
-                  Decide how many milestones you want. Customize each reward unlocked upon reaching it!
+                <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, marginTop: 2 }}>
+                  Set 4 to 20 milestone checkpoints and custom reward unlocks.
                 </p>
               </div>
 
@@ -528,7 +617,7 @@ export default function NewGoalPage() {
                   border: '1px solid var(--brand)',
                   padding: '8px 14px',
                   borderRadius: 10,
-                  fontSize: 13,
+                  fontSize: 12.5,
                   fontWeight: 700,
                   cursor: 'pointer',
                   minHeight: 38,
@@ -542,34 +631,85 @@ export default function NewGoalPage() {
               </button>
             </div>
 
-            {/* Checkpoints slider / selector */}
+            {/* Stepper & Slider Box */}
             <div
               style={{
                 background: 'var(--bg)',
-                borderRadius: 16,
-                padding: '16px 18px',
+                borderRadius: 14,
+                padding: '14px',
                 border: '1px solid var(--line)',
-                marginBottom: 20,
+                marginBottom: 16,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                 <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
-                  Milestone Count:
+                  Total Milestones:
                 </span>
-                <span
-                  style={{
-                    background: 'var(--brand)',
-                    color: '#fff',
-                    padding: '3px 12px',
-                    borderRadius: 20,
-                    fontWeight: 800,
-                    fontSize: 14,
-                  }}
-                >
-                  {form.checkpoints} Checkpoints
-                </span>
+
+                {/* Touch Stepper Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleStepCheckpoints(-1)}
+                    disabled={form.checkpoints <= 4}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      border: '1px solid var(--line)',
+                      background: 'var(--surface-raised)',
+                      color: form.checkpoints <= 4 ? 'var(--ink-subtle)' : 'var(--ink)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: form.checkpoints <= 4 ? 'not-allowed' : 'pointer',
+                      fontSize: 16,
+                    }}
+                    aria-label="Decrease checkpoints"
+                  >
+                    <FiMinus />
+                  </button>
+
+                  <span
+                    style={{
+                      background: 'var(--brand)',
+                      color: '#fff',
+                      padding: '4px 14px',
+                      borderRadius: 16,
+                      fontWeight: 800,
+                      fontSize: 14,
+                      minWidth: 90,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {form.checkpoints} Points
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => handleStepCheckpoints(1)}
+                    disabled={form.checkpoints >= 20}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      border: '1px solid var(--line)',
+                      background: 'var(--surface-raised)',
+                      color: form.checkpoints >= 20 ? 'var(--ink-subtle)' : 'var(--ink)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: form.checkpoints >= 20 ? 'not-allowed' : 'pointer',
+                      fontSize: 16,
+                    }}
+                    aria-label="Increase checkpoints"
+                  >
+                    <FiPlus />
+                  </button>
+                </div>
               </div>
 
+              {/* Slider */}
               <input
                 type="range"
                 min="4"
@@ -577,23 +717,45 @@ export default function NewGoalPage() {
                 step="1"
                 value={form.checkpoints}
                 onChange={e => setForm(f => ({ ...f, checkpoints: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: 'var(--brand)', cursor: 'pointer', height: 28 }}
+                style={{ width: '100%', accentColor: 'var(--brand)', cursor: 'pointer', height: 26 }}
               />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: 'var(--ink-muted)' }}>
-                <span>4 (Min)</span>
-                <span>8</span>
-                <span>12</span>
-                <span>16</span>
-                <span>20 (Max)</span>
+              {/* Quick Milestone Chips */}
+              <div style={{ marginTop: 10 }}>
+                <div className="chip-row">
+                  {CHECKPOINT_PRESETS.map(num => {
+                    const isActive = form.checkpoints === num;
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, checkpoints: num }))}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 16,
+                          border: `1px solid ${isActive ? 'var(--brand)' : 'var(--line)'}`,
+                          background: isActive ? 'var(--brand-soft)' : 'var(--surface)',
+                          color: isActive ? 'var(--brand)' : 'var(--ink-muted)',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {num} {num === 4 ? '(Min)' : num === 20 ? '(Max)' : ''}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* List of Checkpoints & Rewards (Mobile-friendly stacked or side-by-side) */}
-            <div style={{ display: 'grid', gap: 12 }}>
+            {/* List of Checkpoints & Rewards */}
+            <div style={{ display: 'grid', gap: 10 }}>
               {Array.from({ length: form.checkpoints }).map((_, idx) => {
                 const targetNum = Number(form.target) || 100;
                 const milestoneVal = Math.round((targetNum * ((idx + 1) / form.checkpoints)) * 10) / 10;
+                const pct = Math.round(((idx + 1) / form.checkpoints) * 100);
                 return (
                   <div
                     key={idx}
@@ -603,7 +765,7 @@ export default function NewGoalPage() {
                       gap: 8,
                       background: 'var(--bg)',
                       padding: '12px 14px',
-                      borderRadius: 14,
+                      borderRadius: 12,
                       border: '1px solid var(--line)',
                     }}
                   >
@@ -611,15 +773,15 @@ export default function NewGoalPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span
                           style={{
-                            width: 26,
-                            height: 26,
+                            width: 24,
+                            height: 24,
                             borderRadius: '50%',
                             background: 'var(--brand-soft)',
                             color: 'var(--brand)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: 800,
                           }}
                         >
@@ -630,9 +792,14 @@ export default function NewGoalPage() {
                         </span>
                       </div>
 
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand)' }}>
-                        {milestoneVal} {form.unit || 'units'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', background: 'var(--surface-raised)', padding: '2px 6px', borderRadius: 6 }}>
+                          {pct}%
+                        </span>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--brand)' }}>
+                          {milestoneVal} {form.unit || 'units'}
+                        </span>
+                      </div>
                     </div>
 
                     <div style={{ position: 'relative' }}>
@@ -643,7 +810,7 @@ export default function NewGoalPage() {
                         type="text"
                         value={rewards[idx] || ''}
                         onChange={e => handleRewardChange(idx, e.target.value)}
-                        placeholder={`Reward for reaching ${milestoneVal} ${form.unit}...`}
+                        placeholder={`Reward when you reach ${milestoneVal} ${form.unit}...`}
                         style={{
                           width: '100%',
                           padding: '10px 12px 10px 36px',
@@ -653,6 +820,7 @@ export default function NewGoalPage() {
                           color: 'var(--ink)',
                           fontSize: 14,
                           outline: 'none',
+                          minHeight: 42,
                         }}
                       />
                     </div>
@@ -663,34 +831,21 @@ export default function NewGoalPage() {
           </div>
 
           {/* 4. Avatar Selection */}
-          <div
-            style={{
-              background: 'var(--surface)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 28px)',
-              border: '1px solid var(--line)',
-            }}
-          >
-            <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16, marginBottom: 4 }}>
+          <div className="form-card">
+            <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16, marginBottom: 2 }}>
               4. Pick Your Journey Avatar
             </h2>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 16 }}>
-              Your avatar travels along the road and celebrates as you hit checkpoints!
+            <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, marginBottom: 14 }}>
+              Swipe or tap to choose the avatar that travels your roadmap.
             </p>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))',
-                gap: 12,
-              }}
-            >
+            <div className="avatar-carousel">
               {AVATAR_CONFIGS.map((cfg, idx) => {
                 const isSelected = form.avatarIndex === idx;
                 return (
                   <motion.div
                     key={cfg.name}
-                    whileHover={{ scale: 1.06 }}
+                    whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setForm(f => ({ ...f, avatarIndex: idx }))}
                     style={{
@@ -699,18 +854,21 @@ export default function NewGoalPage() {
                       alignItems: 'center',
                       gap: 6,
                       cursor: 'pointer',
-                      padding: '8px 4px',
+                      padding: '10px 8px',
                       borderRadius: 14,
-                      border: `2px solid ${isSelected ? 'var(--brand)' : 'transparent'}`,
-                      background: isSelected ? 'var(--brand-soft)' : 'transparent',
+                      border: `2px solid ${isSelected ? 'var(--brand)' : 'var(--line)'}`,
+                      background: isSelected ? 'var(--brand-soft)' : 'var(--bg)',
+                      flexShrink: 0,
+                      minWidth: 80,
                     }}
                   >
                     <Avatar config={cfg} size={50} glow={isSelected} />
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 11,
                         fontWeight: 700,
                         color: isSelected ? 'var(--brand)' : 'var(--ink-muted)',
+                        textAlign: 'center',
                       }}
                     >
                       {cfg.name}
@@ -742,45 +900,16 @@ export default function NewGoalPage() {
             </div>
           )}
 
-          {/* Form Action Buttons (Responsive flex row or stack on mobile) */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Link
-              href="/goals"
-              style={{
-                flex: '1 1 auto',
-                textAlign: 'center',
-                padding: '12px 20px',
-                borderRadius: 12,
-                border: '1px solid var(--line)',
-                background: 'transparent',
-                color: 'var(--ink-muted)',
-                textDecoration: 'none',
-                fontWeight: 600,
-                fontSize: 14,
-                minHeight: 46,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              Cancel
-            </Link>
-
+          {/* Form Action Buttons (Clean & Stacked on mobile) */}
+          <div className="mobile-action-bar">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
               style={{
-                flex: '2 1 200px',
-                padding: '14px 28px',
+                width: '100%',
+                padding: '14px 24px',
                 borderRadius: 12,
                 background: 'var(--brand)',
                 color: '#fff',
@@ -790,22 +919,45 @@ export default function NewGoalPage() {
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
                 boxShadow: '0 4px 20px var(--neon-glow)',
-                minHeight: 46,
+                minHeight: 48,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
+                order: 1,
               }}
             >
               {loading ? (
                 'Creating Journey...'
               ) : (
                 <>
-                  <FiCheck style={{ fontSize: 16 }} />
+                  <FiCheck style={{ fontSize: 18 }} />
                   <span>Launch Goal & Begin Journey</span>
                 </>
               )}
             </motion.button>
+
+            <Link
+              href="/goals"
+              style={{
+                textAlign: 'center',
+                padding: '12px 20px',
+                borderRadius: 12,
+                border: '1px solid var(--line)',
+                background: 'transparent',
+                color: 'var(--ink-muted)',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: 14,
+                minHeight: 44,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                order: 2,
+              }}
+            >
+              Cancel
+            </Link>
           </div>
         </form>
       </main>

@@ -142,7 +142,7 @@ export default function GoalsPage() {
       const data = await res.json();
       if (res.ok) {
         if (goal.goalType === 'open') {
-          setJoinSuccessToast(`🎉 You joined "${goal.name}"! Moved to My Goals.`);
+          setJoinSuccessToast(`You joined "${goal.name}"! Moved to My Goals.`);
           setTimeout(() => {
             setJoinSuccessToast('');
             router.push(`/goals/${goal._id}`);
@@ -256,9 +256,13 @@ export default function GoalsPage() {
                 fontWeight: 700,
                 fontSize: 14,
                 marginBottom: 20,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
               }}
             >
-              {joinSuccessToast}
+              <FiCheckCircle style={{ fontSize: 18, flexShrink: 0 }} />
+              <span>{joinSuccessToast}</span>
             </motion.div>
           )}
         </AnimatePresence>

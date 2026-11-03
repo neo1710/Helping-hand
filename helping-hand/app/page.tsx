@@ -432,7 +432,8 @@ export default function HomePage() {
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
           >
-            Create a goal with your companion →
+            <span>Create a goal with your companion</span>
+            <FiArrowRight style={{ fontSize: 16 }} />
           </Link>
         </div>
       </section>

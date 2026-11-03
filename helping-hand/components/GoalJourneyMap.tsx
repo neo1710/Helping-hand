@@ -2,7 +2,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { AVATAR_CONFIGS } from './Avatar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiAward, FiLock } from 'react-icons/fi';
+import { FiAward, FiLock, FiCheckCircle } from 'react-icons/fi';
 
 export interface CheckpointRewardItem {
   checkpointIndex: number;
@@ -484,9 +484,14 @@ export default function GoalJourneyMap({
                     marginBottom: 16,
                   }}
                 >
-                  {activeModalReward.reached
-                    ? '✓ Reached & Unlocked!'
-                    : `Locked — reach ${activeModalReward.value} ${unit} to unlock`}
+                  {activeModalReward.reached ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <FiCheckCircle style={{ fontSize: 14 }} />
+                      <span>Reached & Unlocked!</span>
+                    </span>
+                  ) : (
+                    `Locked — reach ${activeModalReward.value} ${unit} to unlock`
+                  )}
                 </p>
 
                 <div

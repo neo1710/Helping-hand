@@ -198,7 +198,7 @@ function GoalJourneyContent() {
           const threshold = target * (i / numCheckpoints);
           if (oldProg < threshold && newProg >= threshold) {
             const rewardName = data.goal.rewards?.[i - 1]?.reward || `Milestone ${i} Reward`;
-            setUnlockedRewardAlert(`🎉 Unlocked Checkpoint ${i} Reward: ${rewardName}!`);
+            setUnlockedRewardAlert(`Unlocked Checkpoint ${i} Reward: ${rewardName}!`);
             break;
           }
         }
@@ -305,7 +305,9 @@ function GoalJourneyContent() {
           <Link
             href="/goals"
             style={{
-              display: 'inline-block',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
               marginTop: 16,
               background: 'var(--brand)',
               color: '#fff',
@@ -315,7 +317,8 @@ function GoalJourneyContent() {
               fontWeight: 700,
             }}
           >
-            ← Back to Goals
+            <FiArrowLeft style={{ fontSize: 16 }} />
+            <span>Back to Goals</span>
           </Link>
         </main>
       </div>
@@ -1153,19 +1156,25 @@ function GoalJourneyContent() {
                   onClick={() => handleLog(inc)}
                   disabled={logging || goal.status === 'completed' || isExpired}
                   style={{
-                    padding: '10px 4px',
+                    padding: '8px 4px',
                     background: 'var(--bg)',
-                    border: '1px solid var(--line)',
+                    border: '1.5px solid var(--line)',
                     borderRadius: 10,
                     color: 'var(--ink)',
-                    fontSize: 12.5,
-                    fontWeight: 700,
+                    fontSize: 13,
+                    fontWeight: 800,
                     cursor: 'pointer',
-                    minHeight: 44,
+                    minHeight: 46,
                     textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1.2,
                   }}
                 >
-                  +{inc} {goal.unit}
+                  <span>+{inc}</span>
+                  <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 600 }}>{goal.unit}</span>
                 </button>
               ))}
             </div>

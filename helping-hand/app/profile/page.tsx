@@ -94,7 +94,7 @@ export default function ProfilePage() {
         const res = await fetch(`/api/user/check-username?username=${encodeURIComponent(clean)}`);
         const data = await res.json();
         setUsernameAvailable(data.available);
-        setUsernameMessage(data.available ? '✓ Username available' : data.reason || 'Already taken');
+        setUsernameMessage(data.available ? 'Username available' : data.reason || 'Already taken');
       } catch {
         setUsernameAvailable(null);
       } finally {
@@ -357,7 +357,7 @@ export default function ProfilePage() {
                     gap: 8,
                   }}
                 >
-                  <span>✉️</span> You Have Goal Invitations!
+                  <FiMail style={{ color: 'var(--brand)' }} /> You Have Goal Invitations!
                 </h3>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {invitations.map(inv => (
@@ -635,9 +635,13 @@ export default function ProfilePage() {
                     color: '#3fcf8e',
                     fontSize: 13.5,
                     fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
-                  ✓ Profile updated successfully!
+                  <FiCheck style={{ fontSize: 16 }} />
+                  <span>Profile updated successfully!</span>
                 </div>
               )}
 

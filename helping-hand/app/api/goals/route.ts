@@ -194,11 +194,11 @@ export async function POST(req: NextRequest) {
     const formattedRewards: ICheckpointReward[] = [];
     for (let i = 1; i <= parsedCheckpoints; i++) {
       const milestoneValue = Math.round((parsedTarget * (i / parsedCheckpoints)) * 100) / 100;
-      const userReward = rewards?.[i - 1]?.reward || rewards?.[i - 1] || `Milestone ${i} Reward! 🎉`;
+      const userReward = rewards?.[i - 1]?.reward || rewards?.[i - 1] || `Milestone ${i} Reward!`;
       formattedRewards.push({
         checkpointIndex: i,
         milestoneValue,
-        reward: typeof userReward === 'string' ? userReward.trim() : `Milestone ${i} Reward! 🎉`,
+        reward: typeof userReward === 'string' ? userReward.trim() : `Milestone ${i} Reward!`,
       });
     }
 
