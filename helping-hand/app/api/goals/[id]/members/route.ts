@@ -59,8 +59,26 @@ export async function POST(req: NextRequest, context: RouteContext) {
           return NextResponse.json({ error: 'Creators cannot leave their own goal. Delete it instead.' }, { status: 400 });
         }
         goal.members.splice(myMemberIndex, 1);
+
+        // Recalculate progress after member leaves
+        if (goal.goalType === 'collaborative') {
+          const totalProgress = goal.members
+            .filter(m => m.status === 'active')
+            .reduce((sum, m) => sum + (m.progress || 0), 0);
+          goal.progress = Math.min(goal.target, totalProgress);
+        } else if (goal.goalType === 'competitive' || goal.goalType === 'open') {
+          const activeMembers = goal.members.filter(m => m.status === 'active');
+          goal.progress = activeMembers.length > 0
+            ? Math.max(...activeMembers.map(m => m.progress || 0))
+            : 0;
+        }
+
+        if (goal.progress < goal.target && goal.status === 'completed') {
+          goal.status = 'active';
+        }
+
         await goal.save();
-        return NextResponse.json({ message: 'You have left or declined the goal.' });
+        return NextResponse.json({ message: 'You have left the goal.' });
       }
     }
 

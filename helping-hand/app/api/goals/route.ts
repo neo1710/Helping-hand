@@ -48,11 +48,14 @@ export async function GET(req: NextRequest) {
       }
     } else if (parent === 'public') {
       // "Public Goals": Available public goals (collaborative, competitive, open)
-      // EXCLUDES personal goals, EXCLUDES expired open goals, and
+      // EXCLUDES personal goals, EXCLUDES expired open goals, EXCLUDES invite-only goals, and
       // EXCLUDES goals where the current user is ALREADY an active member (since those belong in "My Goals")!
       const isPublicType = {
         $or: [
-          { goalType: { $in: ['collaborative', 'competitive'] } },
+          {
+            goalType: { $in: ['collaborative', 'competitive'] },
+            accessType: { $ne: 'invite_only' },
+          },
           { goalType: 'open', endDate: { $gte: now } },
         ],
       };
@@ -100,9 +103,9 @@ export async function GET(req: NextRequest) {
           ],
         };
       } else if (subtype === 'collaborative') {
-        query = { goalType: 'collaborative' };
+        query = { goalType: 'collaborative', accessType: { $ne: 'invite_only' } };
       } else if (subtype === 'competitive') {
-        query = { goalType: 'competitive' };
+        query = { goalType: 'competitive', accessType: { $ne: 'invite_only' } };
       } else if (subtype === 'open') {
         query = { goalType: 'open', endDate: { $gte: now } };
       } else if (subtype === 'my') {
@@ -128,7 +131,7 @@ export async function GET(req: NextRequest) {
             { creatorUserId: currentUser.auth0Id },
             { userId: currentUser.auth0Id },
             { 'members.auth0Id': currentUser.auth0Id },
-            { goalType: { $in: ['collaborative', 'competitive'] } },
+            { goalType: { $in: ['collaborative', 'competitive'] }, accessType: { $ne: 'invite_only' } },
             { goalType: 'open', endDate: { $gte: now } },
           ],
         };
@@ -163,6 +166,7 @@ export async function POST(req: NextRequest) {
       name,
       description,
       goalType = 'personal',
+      accessType = 'public',
       target,
       unit,
       startDate,
@@ -176,6 +180,15 @@ export async function POST(req: NextRequest) {
       avatarHairColor = '#2b2118',
       customAvatar,
     } = body;
+
+    const resolvedAccess =
+      goalType === 'personal'
+        ? 'invite_only'
+        : goalType === 'open'
+        ? 'public'
+        : accessType === 'invite_only'
+        ? 'invite_only'
+        : 'public';
 
     if (!name || !target || !unit || !startDate || !endDate) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -203,6 +216,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const userCustomAvatar = currentUser.customAvatar || customAvatar || {
+      name: currentUser.name || 'Hero Companion',
+      tone: '#3b82f6',
+      skin: '#f0c4a0',
+      hairStyle: 'short',
+      hairColor: '#2b2118',
+      eyesColor: '#1a1a2e',
+      clothingStyle: 'hoodie',
+      accessory: 'none',
+      expression: 'happy',
+    };
+
     const goal = await Goal.create({
       creator: currentUser._id,
       creatorUserId: currentUser.auth0Id,
@@ -212,18 +237,19 @@ export async function POST(req: NextRequest) {
       goalType: ['personal', 'collaborative', 'competitive', 'open'].includes(goalType)
         ? goalType
         : 'personal',
+      accessType: resolvedAccess,
       target: parsedTarget,
       unit: unit || 'km',
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       checkpoints: parsedCheckpoints,
       rewards: formattedRewards,
-      avatarIndex: Number(avatarIndex) ?? 0,
-      avatarTone: customAvatar?.tone || avatarTone || '#3b82f6',
-      avatarSkin: customAvatar?.skin || avatarSkin || '#f0c4a0',
-      avatarHair: customAvatar?.hairStyle || avatarHair || 'short',
-      avatarHairColor: customAvatar?.hairColor || avatarHairColor || '#2b2118',
-      customAvatar: customAvatar || undefined,
+      avatarIndex: 0,
+      avatarTone: userCustomAvatar.tone || '#3b82f6',
+      avatarSkin: userCustomAvatar.skin || '#f0c4a0',
+      avatarHair: userCustomAvatar.hairStyle || 'short',
+      avatarHairColor: userCustomAvatar.hairColor || '#2b2118',
+      customAvatar: userCustomAvatar,
       progress: 0,
       log: [],
       status: 'active',
@@ -235,12 +261,12 @@ export async function POST(req: NextRequest) {
           status: 'active',
           joinedAt: new Date(),
           progress: 0,
-          avatarIndex: Number(avatarIndex) ?? 0,
-          avatarTone: customAvatar?.tone || avatarTone || '#3b82f6',
-          avatarSkin: customAvatar?.skin || avatarSkin || '#f0c4a0',
-          avatarHair: customAvatar?.hairStyle || avatarHair || 'short',
-          avatarHairColor: customAvatar?.hairColor || avatarHairColor || '#2b2118',
-          customAvatar: customAvatar || undefined,
+          avatarIndex: 0,
+          avatarTone: userCustomAvatar.tone || '#3b82f6',
+          avatarSkin: userCustomAvatar.skin || '#f0c4a0',
+          avatarHair: userCustomAvatar.hairStyle || 'short',
+          avatarHairColor: userCustomAvatar.hairColor || '#2b2118',
+          customAvatar: userCustomAvatar,
           log: [],
         },
       ],

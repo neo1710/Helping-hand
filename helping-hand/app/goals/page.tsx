@@ -17,6 +17,7 @@ import {
   FiArrowRight,
   FiUser,
   FiUserPlus,
+  FiLock,
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
@@ -27,6 +28,7 @@ interface Goal {
   name: string;
   description?: string;
   goalType: 'personal' | 'collaborative' | 'competitive' | 'open';
+  accessType?: 'public' | 'invite_only';
   target: number;
   unit: string;
   startDate: string;
@@ -37,6 +39,13 @@ interface Goal {
   avatarSkin: string;
   avatarHair: 'short' | 'long' | 'bun' | 'curly';
   avatarHairColor: string;
+  customAvatar?: {
+    name?: string;
+    tone?: string;
+    skin?: string;
+    hairStyle?: 'short' | 'long' | 'bun' | 'curly';
+    hairColor?: string;
+  };
   status: 'active' | 'completed' | 'abandoned';
   checkpoints: number;
   rewards?: { checkpointIndex: number; reward: string }[];
@@ -489,7 +498,15 @@ export default function GoalsPage() {
               const statusInfo = getStatus(goal);
               const pct = goal.target > 0 ? Math.min(100, Math.round((goal.progress / goal.target) * 100)) : 0;
               const daysLeft = Math.max(0, Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-              const av = AVATAR_CONFIGS[goal.avatarIndex] || AVATAR_CONFIGS[0];
+              const av = goal.customAvatar?.skin || goal.customAvatar?.tone
+                ? {
+                    name: goal.customAvatar.name || 'Hero',
+                    tone: goal.customAvatar.tone || '#3b82f6',
+                    skin: goal.customAvatar.skin || '#f0c4a0',
+                    hairStyle: goal.customAvatar.hairStyle || 'short',
+                    hairColor: goal.customAvatar.hairColor || '#2b2118',
+                  }
+                : (AVATAR_CONFIGS[goal.avatarIndex] || AVATAR_CONFIGS[0]);
               const activeMembers = goal.members?.filter(m => m.status === 'active') || [];
               const memberCount = activeMembers.length || 1;
               const numCheckpoints = goal.checkpoints || 4;
@@ -522,24 +539,55 @@ export default function GoalsPage() {
                 >
                   <div>
                     {/* Top Badge Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: '3px 9px',
-                          borderRadius: 20,
-                          background: 'var(--brand-soft)',
-                          color: 'var(--brand)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          textTransform: 'capitalize',
-                        }}
-                      >
-                        <GoalTypeIcon style={{ fontSize: 13 }} />
-                        <span>{goal.goalType || 'Personal'}</span>
-                      </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '3px 9px',
+                            borderRadius: 20,
+                            background: 'var(--brand-soft)',
+                            color: 'var(--brand)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          <GoalTypeIcon style={{ fontSize: 13 }} />
+                          <span>{goal.goalType || 'Personal'}</span>
+                        </span>
+
+                        {(goal.goalType === 'collaborative' || goal.goalType === 'competitive') && (
+                          <span
+                            style={{
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: 16,
+                              background: goal.accessType === 'invite_only' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                              color: goal.accessType === 'invite_only' ? '#f87171' : 'var(--brand)',
+                              border: `1px solid ${goal.accessType === 'invite_only' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(59, 130, 246, 0.25)'}`,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            {goal.accessType === 'invite_only' ? (
+                              <>
+                                <FiLock style={{ fontSize: 10 }} />
+                                <span>Invite Only</span>
+                              </>
+                            ) : (
+                              <>
+                                <FiGlobe style={{ fontSize: 10 }} />
+                                <span>Public</span>
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </div>
 
                       <span
                         style={{

@@ -18,8 +18,12 @@ import {
   FiShield,
   FiTrash2,
   FiSend,
+  FiLogOut,
+  FiEdit2,
+  FiArrowRight,
 } from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
+import Avatar, { AvatarConfig } from '@/components/Avatar';
 import GoalJourneyMap, { CheckpointRewardItem } from '@/components/GoalJourneyMap';
 
 interface LogEntry {
@@ -44,6 +48,15 @@ interface GoalMember {
   status: 'active' | 'pending_approval' | 'invited';
   joinedAt: string;
   progress: number;
+  customAvatar?: {
+    name?: string;
+    tone?: string;
+    skin?: string;
+    hairStyle?: string;
+    hairColor?: string;
+    accessory?: string;
+    expression?: string;
+  };
   log: LogEntry[];
 }
 
@@ -64,6 +77,7 @@ interface Goal {
   name: string;
   description?: string;
   goalType: 'personal' | 'collaborative' | 'competitive' | 'open';
+  accessType?: 'public' | 'invite_only';
   target: number;
   unit: string;
   startDate: string;
@@ -126,6 +140,7 @@ function GoalJourneyContent() {
   const [goal, setGoal] = useState<Goal | null>(null);
   const [currentUserId, setCurrentUserId] = useState('');
   const [currentUsername, setCurrentUsername] = useState('');
+  const [currentUserAvatar, setCurrentUserAvatar] = useState<any>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<'active' | 'pending_approval' | 'invited' | 'none'>('none');
@@ -141,14 +156,46 @@ function GoalJourneyContent() {
   const [logging, setLogging] = useState(false);
   const [unlockedRewardAlert, setUnlockedRewardAlert] = useState<string | null>(null);
 
+  // Edit log state
+  const [editingLog, setEditingLog] = useState<{ _id: string; amount: string; note: string } | null>(null);
+  const [savingLog, setSavingLog] = useState(false);
+  const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
+
   // Invite state
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteMsg, setInviteMsg] = useState('');
 
-  // Join state
+  // Join and Leave state
   const [joining, setJoining] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // User Profile Inspection state
+  const [inspectingUsername, setInspectingUsername] = useState<string | null>(null);
+  const [inspectedProfile, setInspectedProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  const openUserProfile = async (uname: string) => {
+    if (!uname) return;
+    const clean = uname.replace(/^@/, '').trim();
+    setInspectingUsername(clean);
+    setLoadingProfile(true);
+    setInspectedProfile(null);
+    try {
+      const res = await fetch(`/api/user/profile/${encodeURIComponent(clean)}`);
+      const d = await res.json();
+      if (res.ok) {
+        setInspectedProfile(d);
+      } else {
+        setInspectedProfile({ error: d.error || 'Profile not found' });
+      }
+    } catch {
+      setInspectedProfile({ error: 'Failed to load profile' });
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const fetchGoalDetails = async () => {
     if (!id) return;
@@ -159,6 +206,7 @@ function GoalJourneyContent() {
         setGoal(data.goal);
         setCurrentUserId(data.currentUserId || '');
         setCurrentUsername(data.currentUsername || '');
+        setCurrentUserAvatar(data.currentUserAvatar || data.currentUserProfile?.customAvatar || null);
         setIsCreator(data.isCreator || false);
         setIsExpired(data.isExpired || false);
         setMembershipStatus(data.membershipStatus || 'none');
@@ -235,6 +283,79 @@ function GoalJourneyContent() {
       alert('Failed to send join request.');
     } finally {
       setJoining(false);
+    }
+  };
+
+  const handleLeaveGoal = async () => {
+    if (!confirm('Are you sure you want to leave this goal? You will no longer be a participant.')) return;
+    setLeaving(true);
+    try {
+      const res = await fetch(`/api/goals/${id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'leave' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'You have left the goal.');
+        router.push('/goals');
+      } else {
+        alert(data.error || 'Failed to leave goal');
+      }
+    } catch {
+      alert('Error leaving goal');
+    } finally {
+      setLeaving(false);
+    }
+  };
+
+  const handleSaveEditedLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLog || !editingLog._id) return;
+    const amt = Number(editingLog.amount);
+    if (!amt || amt <= 0) {
+      alert('Please enter a valid amount greater than 0.');
+      return;
+    }
+    setSavingLog(true);
+    try {
+      const res = await fetch(`/api/goals/${id}/logs/${editingLog._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amt, note: editingLog.note }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEditingLog(null);
+        fetchGoalDetails();
+      } else {
+        alert(data.error || 'Failed to update log');
+      }
+    } catch {
+      alert('Error updating log');
+    } finally {
+      setSavingLog(false);
+    }
+  };
+
+  const handleDeleteLog = async (logId?: string) => {
+    if (!logId) return;
+    if (!confirm('Are you sure you want to delete this log entry? This will adjust your progress accordingly.')) return;
+    setDeletingLogId(logId);
+    try {
+      const res = await fetch(`/api/goals/${id}/logs/${logId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchGoalDetails();
+      } else {
+        alert(data.error || 'Failed to delete log');
+      }
+    } catch {
+      alert('Error deleting log');
+    } finally {
+      setDeletingLogId(null);
     }
   };
 
@@ -441,22 +562,66 @@ function GoalJourneyContent() {
             )}
 
             {membershipStatus === 'pending_approval' && (
-              <span
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    color: '#f59e0b',
+                    padding: '6px 12px',
+                    borderRadius: 20,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <FiClock style={{ fontSize: 13 }} />
+                  <span>Request Pending Approval</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLeaveGoal}
+                  disabled={leaving}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--line)',
+                    color: 'var(--ink-muted)',
+                    borderRadius: 8,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel Request
+                </button>
+              </div>
+            )}
+
+            {membershipStatus === 'active' && !isCreator && (
+              <button
+                type="button"
+                onClick={handleLeaveGoal}
+                disabled={leaving}
                 style={{
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: '#f59e0b',
-                  padding: '6px 12px',
-                  borderRadius: 20,
-                  fontSize: 12.5,
+                  background: 'transparent',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#ef4444',
+                  borderRadius: 10,
+                  padding: '8px 16px',
+                  fontSize: 13,
                   fontWeight: 700,
+                  cursor: leaving ? 'not-allowed' : 'pointer',
+                  minHeight: 40,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
                 }}
               >
-                <FiClock style={{ fontSize: 13 }} />
-                <span>Request Pending Approval</span>
-              </span>
+                <FiLogOut style={{ fontSize: 14 }} />
+                <span>{leaving ? 'Leaving...' : 'Leave Goal'}</span>
+              </button>
             )}
 
             {membershipStatus === 'invited' && (
@@ -598,6 +763,34 @@ function GoalJourneyContent() {
                   {goal.goalType} Goal
                 </span>
 
+                {(goal.goalType === 'collaborative' || goal.goalType === 'competitive') && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      background: goal.accessType === 'invite_only' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                      color: goal.accessType === 'invite_only' ? '#f87171' : 'var(--brand)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    {goal.accessType === 'invite_only' ? (
+                      <>
+                        <FiLock style={{ fontSize: 11 }} />
+                        <span>Invite-Only</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiGlobe style={{ fontSize: 11 }} />
+                        <span>Public Goal</span>
+                      </>
+                    )}
+                  </span>
+                )}
+
                 <span
                   style={{
                     fontSize: 11,
@@ -659,7 +852,24 @@ function GoalJourneyContent() {
                 </span>
                 <span>•</span>
                 <span>
-                  Creator: <strong style={{ color: 'var(--brand)' }}>@{goal.creator?.username || 'user'}</strong>
+                  Creator:{' '}
+                  <button
+                    type="button"
+                    onClick={() => openUserProfile(goal.creator?.username || '')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--brand)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontSize: 13,
+                      textDecoration: 'underline',
+                      textUnderlineOffset: 2,
+                    }}
+                  >
+                    @{goal.creator?.username || 'user'}
+                  </button>
                 </span>
               </div>
             </div>
@@ -751,7 +961,11 @@ function GoalJourneyContent() {
             unit={goal.unit}
             checkpoints={numCheckpoints}
             avatarIndex={goal.avatarIndex}
-            customAvatar={goal.customAvatar}
+            customAvatar={
+              currentUserAvatar ||
+              goal.members?.find(m => m.auth0Id === currentUserId)?.customAvatar ||
+              goal.customAvatar
+            }
             goalName={goal.name}
             rewards={goal.rewards || []}
           />
@@ -882,11 +1096,15 @@ function GoalJourneyContent() {
                         {idx === 0 && <FiAward style={{ fontSize: 15 }} />}
                         <span>{rankBadge}</span>
                       </span>
-                      <div>
+                      <div
+                        onClick={() => openUserProfile(r.username)}
+                        style={{ cursor: 'pointer' }}
+                        title={`View @${r.username}'s profile`}
+                      >
                         <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
                           {r.name} {isMe && '(You)'}
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--brand)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
                           @{r.username}
                         </div>
                       </div>
@@ -941,12 +1159,16 @@ function GoalJourneyContent() {
                 return (
                   <div
                     key={m._id}
+                    onClick={() => u?.username && openUserProfile(u.username)}
                     style={{
                       background: 'var(--bg)',
                       borderRadius: 14,
                       padding: '14px 16px',
                       border: '1px solid var(--line)',
+                      cursor: u?.username ? 'pointer' : 'default',
+                      transition: 'border-color 0.2s',
                     }}
+                    title={u?.username ? `View @${u.username}'s profile` : ''}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
@@ -965,7 +1187,7 @@ function GoalJourneyContent() {
                         {m.role}
                       </span>
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--brand)', marginBottom: 6 }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--brand)', marginBottom: 6, textDecoration: 'underline', textUnderlineOffset: 2 }}>
                       @{u?.username || 'member'}
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>
@@ -1286,51 +1508,478 @@ function GoalJourneyContent() {
               Recent progress and milestones achieved.
             </p>
 
-            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'grid', gap: 8 }}>
+            <div style={{ maxHeight: 340, overflowY: 'auto', display: 'grid', gap: 8 }}>
               {(!goal.log || goal.log.length === 0) ? (
                 <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--ink-muted)', fontSize: 13.5 }}>
                   No progress logged yet. Make your first entry above!
                 </div>
               ) : (
-                [...goal.log].reverse().map((entry, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '10px 12px',
-                      background: 'var(--bg)',
-                      borderRadius: 10,
-                      border: '1px solid var(--line)',
-                      gap: 8,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>
-                        +{entry.amount} {goal.unit}
-                        {entry.username && (
-                          <span style={{ fontSize: 11.5, color: 'var(--brand)', marginLeft: 6 }}>
-                            @{entry.username}
-                          </span>
+                [...goal.log].reverse().map((entry, idx) => {
+                  const canManage =
+                    (entry.userId && entry.userId === currentUserId) ||
+                    (entry.username && entry.username === currentUsername) ||
+                    isCreator;
+                  return (
+                    <div
+                      key={entry._id || idx}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 12px',
+                        background: 'var(--bg)',
+                        borderRadius: 10,
+                        border: '1px solid var(--line)',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ flex: '1 1 180px' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>
+                          +{entry.amount} {goal.unit}
+                          {entry.username && (
+                            <button
+                              type="button"
+                              onClick={() => openUserProfile(entry.username!)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                fontSize: 11.5,
+                                color: 'var(--brand)',
+                                marginLeft: 6,
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                textDecoration: 'underline',
+                                textUnderlineOffset: 2,
+                              }}
+                            >
+                              @{entry.username}
+                            </button>
+                          )}
+                        </div>
+                        {entry.note && (
+                          <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginTop: 2, wordBreak: 'break-word' }}>
+                            {entry.note}
+                          </div>
                         )}
                       </div>
-                      {entry.note && (
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginTop: 2 }}>
-                          {entry.note}
-                        </div>
-                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11.5, color: 'var(--ink-muted)', whiteSpace: 'nowrap' }}>
+                          {formatDate(entry.date)}
+                        </span>
+
+                        {canManage && (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              type="button"
+                              title="Edit log entry"
+                              onClick={() =>
+                                setEditingLog({
+                                  _id: entry._id || '',
+                                  amount: String(entry.amount),
+                                  note: entry.note || '',
+                                })
+                              }
+                              style={{
+                                background: 'var(--surface-raised)',
+                                border: '1px solid var(--line)',
+                                color: 'var(--brand)',
+                                borderRadius: 6,
+                                padding: '5px 7px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 12,
+                              }}
+                            >
+                              <FiEdit2 />
+                            </button>
+                            <button
+                              type="button"
+                              title="Delete log entry"
+                              disabled={deletingLogId === entry._id}
+                              onClick={() => handleDeleteLog(entry._id)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                color: '#ef4444',
+                                borderRadius: 6,
+                                padding: '5px 7px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 12,
+                              }}
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>
-                      {formatDate(entry.date)}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         </div>
+
+        {/* Edit Log Modal */}
+        <AnimatePresence>
+          {editingLog && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0,0,0,0.7)',
+                backdropFilter: 'blur(5px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 60,
+                padding: 16,
+              }}
+              onClick={() => setEditingLog(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1.5px solid var(--line)',
+                  borderRadius: 20,
+                  padding: '24px 22px',
+                  maxWidth: 420,
+                  width: '100%',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FiEdit2 style={{ color: 'var(--brand)', fontSize: 17 }} />
+                    <span>Edit Progress Log</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLog(null)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--ink-muted)',
+                      fontSize: 18,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveEditedLog} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 5 }}>
+                      Amount ({goal.unit}) <span style={{ color: 'var(--brand)' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="any"
+                      value={editingLog.amount}
+                      onChange={e => setEditingLog({ ...editingLog, amount: e.target.value })}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '11px 14px',
+                        borderRadius: 10,
+                        border: '1.5px solid var(--line)',
+                        background: 'var(--bg)',
+                        color: 'var(--ink)',
+                        fontSize: 15,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 5 }}>
+                      Note / Reflection (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingLog.note}
+                      onChange={e => setEditingLog({ ...editingLog, note: e.target.value })}
+                      placeholder="e.g. Corrected progress amount"
+                      style={{
+                        width: '100%',
+                        padding: '11px 14px',
+                        borderRadius: 10,
+                        border: '1.5px solid var(--line)',
+                        background: 'var(--bg)',
+                        color: 'var(--ink)',
+                        fontSize: 14,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    <button
+                      type="submit"
+                      disabled={savingLog}
+                      style={{
+                        flex: 1,
+                        background: 'var(--brand)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '12px',
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        cursor: savingLog ? 'not-allowed' : 'pointer',
+                        opacity: savingLog ? 0.7 : 1,
+                      }}
+                    >
+                      {savingLog ? 'Saving...' : 'Update Log'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingLog(null)}
+                      style={{
+                        background: 'var(--surface-raised)',
+                        color: 'var(--ink-muted)',
+                        border: '1px solid var(--line)',
+                        padding: '12px 18px',
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        fontSize: 14,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* User Profile Inspection Modal */}
+        <AnimatePresence>
+          {inspectingUsername && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0,0,0,0.7)',
+                backdropFilter: 'blur(6px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 65,
+                padding: 16,
+              }}
+              onClick={() => setInspectingUsername(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1.5px solid var(--line)',
+                  borderRadius: 22,
+                  padding: 'clamp(20px, 3.5vw, 28px)',
+                  maxWidth: 520,
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+                }}
+              >
+                {/* Modal Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Connected Participant Profile
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setInspectingUsername(null)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--ink-muted)',
+                      fontSize: 20,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+
+                {loadingProfile ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--ink-muted)', fontSize: 14 }}>
+                    Loading participant profile...
+                  </div>
+                ) : inspectedProfile?.error ? (
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#f87171', fontSize: 14 }}>
+                    {inspectedProfile.error}
+                  </div>
+                ) : inspectedProfile?.user ? (
+                  <div style={{ display: 'grid', gap: 18 }}>
+                    {/* User Info Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div
+                        style={{
+                          borderRadius: '50%',
+                          padding: 3,
+                          background: 'var(--brand-soft)',
+                          border: '2px solid var(--brand)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {inspectedProfile.user.customAvatar ? (
+                          <Avatar config={inspectedProfile.user.customAvatar} size={56} />
+                        ) : inspectedProfile.user.picture ? (
+                          <img
+                            src={inspectedProfile.user.picture}
+                            alt={inspectedProfile.user.name}
+                            style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: '50%',
+                              background: 'var(--brand)',
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 22,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {inspectedProfile.user.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', margin: 0, wordBreak: 'break-word' }}>
+                          {inspectedProfile.user.name}
+                        </h3>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand)', marginTop: 2 }}>
+                          @{inspectedProfile.user.username}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    {inspectedProfile.user.bio && (
+                      <p style={{ color: 'var(--ink-muted)', fontSize: 13, margin: 0, lineHeight: 1.5, background: 'var(--bg)', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--line)' }}>
+                        {inspectedProfile.user.bio}
+                      </p>
+                    )}
+
+                    {/* Mini Stats */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>
+                          {inspectedProfile.stats?.totalGoals || 0}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>Total Goals</div>
+                      </div>
+                      <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#3fcf8e' }}>
+                          {inspectedProfile.stats?.completedGoals || 0}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>Completed</div>
+                      </div>
+                      <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b' }}>
+                          {inspectedProfile.stats?.activeGoals || 0}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>Active</div>
+                      </div>
+                    </div>
+
+                    {/* Privacy Note */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '12px 14px',
+                        background: 'var(--bg)',
+                        borderRadius: 12,
+                        border: '1px solid var(--line)',
+                        color: 'var(--ink-muted)',
+                        fontSize: 12.5,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      <FiLock style={{ fontSize: 16, color: 'var(--brand)', flexShrink: 0 }} />
+                      <span>Individual goal details & logs are kept private to protect member focus.</span>
+                    </div>
+
+                    {/* Full Profile Link */}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <Link
+                        href={`/profile/${encodeURIComponent(inspectedProfile.user.username)}`}
+                        style={{
+                          flex: 1,
+                          background: 'var(--brand)',
+                          color: '#fff',
+                          padding: '11px',
+                          borderRadius: 10,
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          fontSize: 13.5,
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <span>View Full Profile Page</span>
+                        <FiArrowRight style={{ fontSize: 14 }} />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setInspectingUsername(null)}
+                        style={{
+                          background: 'var(--surface-raised)',
+                          border: '1px solid var(--line)',
+                          color: 'var(--ink-muted)',
+                          padding: '11px 18px',
+                          borderRadius: 10,
+                          fontWeight: 600,
+                          fontSize: 13.5,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

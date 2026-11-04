@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import Navbar from '@/components/Navbar';
-import Avatar, { AVATAR_CONFIGS, AvatarConfig } from '@/components/Avatar';
+import Avatar, { AvatarConfig } from '@/components/Avatar';
 
 const UNITS = ['km', 'hours', 'books', 'sessions', '₹', 'steps', 'pages', 'reps', 'kg'];
 
@@ -85,16 +85,15 @@ export default function NewGoalPage() {
     name: '',
     description: '',
     goalType: 'personal' as 'personal' | 'collaborative' | 'competitive' | 'open',
+    accessType: 'public' as 'public' | 'invite_only',
     target: '',
     unit: 'km',
     startDate: '',
     endDate: '',
     checkpoints: 4,
-    avatarIndex: 0,
   });
 
   const [customAvatar, setCustomAvatar] = useState<AvatarConfig | null>(null);
-  const [avatarChoiceType, setAvatarChoiceType] = useState<'custom' | 'preset'>('preset');
 
   const [rewards, setRewards] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,9 +107,6 @@ export default function NewGoalPage() {
         const data = await res.json();
         if (res.ok && data.customAvatar) {
           setCustomAvatar(data.customAvatar);
-          if (data.hasCustomAvatar) {
-            setAvatarChoiceType('custom');
-          }
         }
       } catch (e) {
         console.warn('Error loading custom avatar:', e);
@@ -202,8 +198,6 @@ export default function NewGoalPage() {
 
     setLoading(true);
     try {
-      const isCustom = avatarChoiceType === 'custom' && customAvatar;
-      const av = isCustom ? customAvatar : AVATAR_CONFIGS[form.avatarIndex];
       const res = await fetch('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -211,6 +205,7 @@ export default function NewGoalPage() {
           name: form.name.trim(),
           description: form.description.trim(),
           goalType: form.goalType,
+          accessType: form.goalType === 'personal' ? 'invite_only' : form.goalType === 'open' ? 'public' : form.accessType,
           target: Number(form.target),
           unit: form.unit,
           startDate: form.startDate,
@@ -220,12 +215,7 @@ export default function NewGoalPage() {
             checkpointIndex: idx + 1,
             reward: r.trim() || `Milestone ${idx + 1} Reward!`,
           })),
-          avatarIndex: isCustom ? 0 : form.avatarIndex,
-          avatarTone: av.tone,
-          avatarSkin: av.skin,
-          avatarHair: av.hairStyle,
-          avatarHairColor: av.hairColor,
-          customAvatar: isCustom ? customAvatar : undefined,
+          customAvatar: customAvatar || undefined,
         }),
       });
 
@@ -385,6 +375,74 @@ export default function NewGoalPage() {
                 );
               })}
             </div>
+
+            {/* Access Mode Selector for Collaborative / Competitive */}
+            {(form.goalType === 'collaborative' || form.goalType === 'competitive') && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: '14px 16px',
+                  background: 'var(--bg)',
+                  borderRadius: 14,
+                  border: '1px solid var(--line)',
+                }}
+              >
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ display: 'block', fontWeight: 800, color: 'var(--ink)', fontSize: 13.5 }}>
+                    Access & Visibility Mode
+                  </label>
+                  <p style={{ color: 'var(--ink-muted)', fontSize: 12, marginTop: 2 }}>
+                    Choose whether this {form.goalType} goal appears in the Public feed or stays hidden as Invite-Only.
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 10 }}>
+                  <div
+                    onClick={() => setForm(f => ({ ...f, accessType: 'public' }))}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      border: `1.5px solid ${form.accessType === 'public' ? 'var(--brand)' : 'var(--line)'}`,
+                      background: form.accessType === 'public' ? 'var(--brand-soft)' : 'var(--surface)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>
+                        Public Goal
+                      </span>
+                      {form.accessType === 'public' && <FiCheckCircle style={{ color: 'var(--brand)', fontSize: 16 }} />}
+                    </div>
+                    <p style={{ fontSize: 11.5, color: 'var(--ink-muted)', margin: 0, lineHeight: 1.4 }}>
+                      Visible in Public Goals feed. Anyone can discover it and request to join.
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setForm(f => ({ ...f, accessType: 'invite_only' }))}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      border: `1.5px solid ${form.accessType === 'invite_only' ? 'var(--brand)' : 'var(--line)'}`,
+                      background: form.accessType === 'invite_only' ? 'var(--brand-soft)' : 'var(--surface)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>
+                        Invite-Only Goal
+                      </span>
+                      {form.accessType === 'invite_only' && <FiCheckCircle style={{ color: 'var(--brand)', fontSize: 16 }} />}
+                    </div>
+                    <p style={{ fontSize: 11.5, color: 'var(--ink-muted)', margin: 0, lineHeight: 1.4 }}>
+                      Hidden from the public feed. People can only join if you send them an invite.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. Goal Details */}
@@ -854,138 +912,71 @@ export default function NewGoalPage() {
             </div>
           </div>
 
-          {/* 4. Avatar Selection */}
-          <div className="form-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-              <div>
-                <h2 style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 16, margin: 0 }}>
-                  4. Pick Your Journey Avatar
-                </h2>
-                <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, margin: '2px 0 0' }}>
-                  Choose your hero companion to travel your goal roadmap pin.
-                </p>
-              </div>
-
-              {/* 3D Custom Studio Link */}
-              <Link
-                href="/avatar"
-                style={{
-                  color: 'var(--brand)',
-                  textDecoration: 'none',
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '6px 12px',
-                  borderRadius: 20,
-                  background: 'var(--brand-soft)',
-                  border: '1px solid var(--brand)',
-                }}
-              >
-                <HiSparkles style={{ fontSize: 14 }} />
-                <span>3D Avatar Studio</span>
-              </Link>
-            </div>
-
-            <div className="avatar-carousel">
-              {/* My Custom Avatar Card (if loaded) */}
-              {customAvatar && (
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setAvatarChoiceType('custom')}
+          {/* Custom Avatar Companion Note */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 16,
+              border: '1px solid var(--line)',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 14,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              {customAvatar ? (
+                <div style={{ borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--brand)' }}>
+                  <Avatar config={customAvatar} size={46} />
+                </div>
+              ) : (
+                <div
                   style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: '50%',
+                    background: 'var(--brand-soft)',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 6,
-                    cursor: 'pointer',
-                    padding: '10px 10px',
-                    borderRadius: 14,
-                    border: `2px solid ${avatarChoiceType === 'custom' ? 'var(--brand)' : 'var(--line)'}`,
-                    background: avatarChoiceType === 'custom' ? 'var(--brand-soft)' : 'var(--bg)',
-                    flexShrink: 0,
-                    minWidth: 92,
-                    position: 'relative',
+                    justifyContent: 'center',
+                    color: 'var(--brand)',
                   }}
                 >
-                  <div style={{ position: 'relative' }}>
-                    <Avatar config={customAvatar} size={50} glow={avatarChoiceType === 'custom'} />
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -4,
-                        background: 'var(--brand)',
-                        color: '#fff',
-                        fontSize: 9,
-                        fontWeight: 900,
-                        padding: '1px 5px',
-                        borderRadius: 8,
-                      }}
-                    >
-                      3D
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      color: avatarChoiceType === 'custom' ? 'var(--brand)' : 'var(--ink)',
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap',
-                      maxWidth: 86,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {customAvatar.name || 'My Hero'}
-                  </span>
-                </motion.div>
+                  <HiSparkles style={{ fontSize: 22 }} />
+                </div>
               )}
-
-              {/* 6 Pre-made Avatar Options */}
-              {AVATAR_CONFIGS.map((cfg, idx) => {
-                const isSelected = avatarChoiceType === 'preset' && form.avatarIndex === idx;
-                return (
-                  <motion.div
-                    key={cfg.name}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setAvatarChoiceType('preset');
-                      setForm(f => ({ ...f, avatarIndex: idx }));
-                    }}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 6,
-                      cursor: 'pointer',
-                      padding: '10px 8px',
-                      borderRadius: 14,
-                      border: `2px solid ${isSelected ? 'var(--brand)' : 'var(--line)'}`,
-                      background: isSelected ? 'var(--brand-soft)' : 'var(--bg)',
-                      flexShrink: 0,
-                      minWidth: 80,
-                    }}
-                  >
-                    <Avatar config={cfg} size={50} glow={isSelected} />
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: isSelected ? 'var(--brand)' : 'var(--ink-muted)',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {cfg.name}
-                    </span>
-                  </motion.div>
-                );
-              })}
+              <div>
+                <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14 }}>
+                  Your Journey Avatar: {customAvatar?.name || 'Custom Hero'}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+                  Your personal custom avatar travels with you along this goal journey roadmap.
+                </div>
+              </div>
             </div>
+
+            <Link
+              href="/avatar"
+              style={{
+                color: 'var(--brand)',
+                textDecoration: 'none',
+                fontSize: 12.5,
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 16px',
+                borderRadius: 20,
+                background: 'var(--brand-soft)',
+                border: '1px solid var(--brand)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <HiSparkles style={{ fontSize: 15 }} />
+              <span>Customize in 3D Studio</span>
+            </Link>
           </div>
 
           {/* Error Banner */}

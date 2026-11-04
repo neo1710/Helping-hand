@@ -68,6 +68,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       currentUserId: currentUser.auth0Id,
       currentUsername: currentUser.username,
       currentUserProfile: currentUser,
+      currentUserAvatar: currentUser.customAvatar || null,
       isCreator,
       isExpired,
       membershipStatus: userMember ? userMember.status : 'none',
@@ -159,7 +160,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     if (typeof amount === 'number' && amount > 0) {
+      const logId = new mongoose.Types.ObjectId();
       const entry = {
+        _id: logId,
         userId: currentUser.auth0Id,
         username: currentUser.username,
         amount,
@@ -168,8 +171,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       };
 
       // Add to member's personal progress & log
-      member.progress = Math.min(goal.target, member.progress + amount);
       member.log.push(entry);
+      member.progress = Math.min(
+        goal.target,
+        member.log.reduce((acc: number, l: any) => acc + (Number(l.amount) || 0), 0)
+      );
 
       // Add to goal-level log
       goal.log.push(entry);

@@ -39,6 +39,18 @@ export async function POST(_req: NextRequest, context: RouteContext) {
         String(m.user) === String(currentUser._id)
     );
 
+    const userCustomAvatar = currentUser.customAvatar || {
+      name: currentUser.name || 'Hero Companion',
+      tone: '#3b82f6',
+      skin: '#f0c4a0',
+      hairStyle: 'short',
+      hairColor: '#2b2118',
+      eyesColor: '#1a1a2e',
+      clothingStyle: 'hoodie',
+      accessory: 'none',
+      expression: 'happy',
+    };
+
     if (existingIndex >= 0) {
       const existing = goal.members[existingIndex];
       if (existing.status === 'active') {
@@ -50,9 +62,22 @@ export async function POST(_req: NextRequest, context: RouteContext) {
       if (existing.status === 'invited') {
         // Automatically accept invite!
         existing.status = 'active';
+        existing.customAvatar = userCustomAvatar;
+        existing.avatarTone = userCustomAvatar.tone || '#3b82f6';
+        existing.avatarSkin = userCustomAvatar.skin || '#f0c4a0';
+        existing.avatarHair = userCustomAvatar.hairStyle || 'short';
+        existing.avatarHairColor = userCustomAvatar.hairColor || '#2b2118';
         await goal.save();
         return NextResponse.json({ message: 'Invitation accepted! Welcome to the goal.' });
       }
+    }
+
+    // If invite_only and user wasn't invited, reject join request
+    if (goal.accessType === 'invite_only') {
+      return NextResponse.json(
+        { error: 'This goal is invite-only. You can only join if the creator sends you an invitation.' },
+        { status: 403 }
+      );
     }
 
     if (goal.goalType === 'open') {
@@ -65,10 +90,11 @@ export async function POST(_req: NextRequest, context: RouteContext) {
         joinedAt: new Date(),
         progress: 0,
         avatarIndex: 0,
-        avatarTone: '#3b82f6',
-        avatarSkin: '#f0c4a0',
-        avatarHair: 'short',
-        avatarHairColor: '#2b2118',
+        avatarTone: userCustomAvatar.tone || '#3b82f6',
+        avatarSkin: userCustomAvatar.skin || '#f0c4a0',
+        avatarHair: userCustomAvatar.hairStyle || 'short',
+        avatarHairColor: userCustomAvatar.hairColor || '#2b2118',
+        customAvatar: userCustomAvatar,
         log: [],
       });
       await goal.save();
@@ -83,10 +109,11 @@ export async function POST(_req: NextRequest, context: RouteContext) {
         joinedAt: new Date(),
         progress: 0,
         avatarIndex: 0,
-        avatarTone: '#3b82f6',
-        avatarSkin: '#f0c4a0',
-        avatarHair: 'short',
-        avatarHairColor: '#2b2118',
+        avatarTone: userCustomAvatar.tone || '#3b82f6',
+        avatarSkin: userCustomAvatar.skin || '#f0c4a0',
+        avatarHair: userCustomAvatar.hairStyle || 'short',
+        avatarHairColor: userCustomAvatar.hairColor || '#2b2118',
+        customAvatar: userCustomAvatar,
         log: [],
       });
       await goal.save();

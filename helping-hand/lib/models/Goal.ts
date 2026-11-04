@@ -34,6 +34,7 @@ export interface IGoalMember {
 }
 
 export type GoalType = 'personal' | 'collaborative' | 'competitive' | 'open';
+export type GoalAccess = 'public' | 'invite_only';
 
 export interface IGoal extends Document {
   creator?: Types.ObjectId;    // Reference to User model
@@ -42,6 +43,7 @@ export interface IGoal extends Document {
   name: string;
   description?: string;
   goalType: GoalType;
+  accessType?: GoalAccess;
   target: number;
   unit: string;
   startDate: Date;
@@ -127,6 +129,12 @@ const GoalSchema = new Schema<IGoal>(
       type: String,
       enum: ['personal', 'collaborative', 'competitive', 'open'],
       default: 'personal',
+      index: true,
+    },
+    accessType: {
+      type: String,
+      enum: ['public', 'invite_only'],
+      default: 'public',
       index: true,
     },
     target: { type: Number, required: true, min: 1 },
