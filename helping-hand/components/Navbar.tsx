@@ -102,7 +102,7 @@ export default function Navbar() {
           <span
             style={{
               fontWeight: 800,
-              fontSize: 'clamp(17px, 3.5vw, 20px)',
+              fontSize: 'clamp(16px, 3.8vw, 20px)',
               color: 'var(--ink)',
               letterSpacing: '-0.5px',
             }}
@@ -159,7 +159,7 @@ export default function Navbar() {
         </div>
 
         {/* Right side controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.8vw, 10px)', flexShrink: 0 }}>
           {/* Notification bell on mobile or top right */}
           <Link
             href="/notifications"

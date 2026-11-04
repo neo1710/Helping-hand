@@ -46,6 +46,9 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
 }
 
 body {
@@ -53,7 +56,15 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
   transition: background 0.3s ease, color 0.3s ease;
+  -webkit-text-size-adjust: 100%;
+}
+
+img, svg, canvas {
+  max-width: 100%;
 }
 
 /* Custom Scrollbar */
@@ -360,6 +371,13 @@ body {
   textarea {
     font-size: 16px !important;
   }
+}
+
+input[type="date"] {
+  color-scheme: dark;
+}
+[data-theme="light"] input[type="date"] {
+  color-scheme: light;
 }
 
 /* Horizontal scrollable tab row without ugly scrollbars */

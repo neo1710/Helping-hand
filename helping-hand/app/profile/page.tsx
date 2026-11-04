@@ -489,26 +489,28 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <Link
-                  href="/avatar"
-                  style={{
-                    marginLeft: 'auto',
-                    padding: '8px 14px',
-                    borderRadius: 12,
-                    background: 'var(--brand-soft)',
-                    border: '1.5px solid var(--brand)',
-                    color: 'var(--brand)',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <FiSmile />
-                  <span>3D Avatar Studio</span>
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <Link
+                    href="/avatar"
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 12,
+                      background: 'var(--brand-soft)',
+                      border: '1.5px solid var(--brand)',
+                      color: 'var(--brand)',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      minHeight: 40,
+                    }}
+                  >
+                    <FiSmile />
+                    <span>3D Avatar Studio</span>
+                  </Link>
+                </div>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--line)' }} />

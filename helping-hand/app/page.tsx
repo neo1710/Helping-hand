@@ -166,11 +166,12 @@ export default function HomePage() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
             style={{
-              fontSize: 'clamp(54px, 8.5vw, 98px)',
+              fontSize: 'clamp(36px, 8vw, 94px)',
               fontWeight: 900,
-              lineHeight: 1.05,
-              letterSpacing: '-3px',
+              lineHeight: 1.08,
+              letterSpacing: '-1.5px',
               marginBottom: 24,
+              wordBreak: 'break-word',
             }}
           >
             <span style={{ color: 'var(--ink)' }}>Grow</span>
@@ -382,7 +383,7 @@ export default function HomePage() {
         </div>
 
         {/* Clickable Avatar selector preview */}
-        <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 'clamp(10px, 2.5vw, 20px)', justifyContent: 'center', flexWrap: 'wrap' }}>
           {AVATAR_CONFIGS.map((av, i) => {
             const isSelected = selectedAvatar === i;
             return (
@@ -395,10 +396,10 @@ export default function HomePage() {
                   background: isSelected ? 'var(--brand-soft)' : 'var(--surface)',
                   border: isSelected ? `2px solid ${av.tone}` : '1px solid var(--line)',
                   borderRadius: 20,
-                  padding: '24px 20px',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                  padding: 'clamp(14px, 3vw, 24px) clamp(12px, 2.5vw, 20px)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                   cursor: 'pointer',
-                  minWidth: 130,
+                  minWidth: 'clamp(90px, 26vw, 130px)',
                   boxShadow: isSelected ? `0 0 24px ${av.tone}55` : 'none',
                   transition: 'background 0.25s, border-color 0.25s, box-shadow 0.25s',
                 }}

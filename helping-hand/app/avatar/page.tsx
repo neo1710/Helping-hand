@@ -361,7 +361,7 @@ export default function CustomAvatarStudioPage() {
         >
           {/* ── Left Column: 3D Interactive Viewport ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ height: 480, position: 'relative' }}>
+            <div style={{ height: 'clamp(340px, 48vh, 480px)', position: 'relative' }}>
               <Avatar3DCanvas config={avatar} />
             </div>
 
@@ -513,13 +513,13 @@ export default function CustomAvatarStudioPage() {
                     type="button"
                     onClick={() => setActiveTab(tab.id as typeof activeTab)}
                     style={{
-                      padding: '10px 6px',
+                      padding: '8px 4px',
                       borderRadius: 10,
                       border: 'none',
                       background: isActive ? 'var(--surface)' : 'transparent',
                       color: isActive ? 'var(--brand)' : 'var(--ink-muted)',
                       fontWeight: isActive ? 800 : 600,
-                      fontSize: 12.5,
+                      fontSize: 'clamp(11px, 2.5vw, 12.5px)',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -527,6 +527,8 @@ export default function CustomAvatarStudioPage() {
                       gap: 4,
                       boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
                       transition: 'all 0.2s ease',
+                      minHeight: 44,
+                      justifyContent: 'center',
                     }}
                   >
                     <Icon style={{ fontSize: 16 }} />

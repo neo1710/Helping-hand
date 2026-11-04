@@ -207,7 +207,7 @@ function ProfileContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div
               style={{
-                height: 480,
+                height: 'clamp(340px, 48vh, 480px)',
                 position: 'relative',
                 borderRadius: 24,
                 overflow: 'hidden',
@@ -222,7 +222,9 @@ function ProfileContent() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 16px',
+                flexWrap: 'wrap',
+                gap: 8,
+                padding: '10px 14px',
                 background: 'var(--surface)',
                 borderRadius: 14,
                 border: '1px solid var(--line)',
@@ -407,7 +409,7 @@ function ProfileContent() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 12,
+                  gap: 'clamp(6px, 1.5vw, 12px)',
                   marginBottom: 18,
                 }}
               >
@@ -415,7 +417,7 @@ function ProfileContent() {
                   style={{
                     background: 'var(--bg)',
                     borderRadius: 14,
-                    padding: '14px 10px',
+                    padding: '12px 6px',
                     border: '1px solid var(--line)',
                     textAlign: 'center',
                   }}
@@ -448,7 +450,7 @@ function ProfileContent() {
                   style={{
                     background: 'var(--bg)',
                     borderRadius: 14,
-                    padding: '14px 10px',
+                    padding: '12px 6px',
                     border: '1px solid var(--line)',
                     textAlign: 'center',
                   }}
@@ -481,7 +483,7 @@ function ProfileContent() {
                   style={{
                     background: 'var(--bg)',
                     borderRadius: 14,
-                    padding: '14px 10px',
+                    padding: '12px 6px',
                     border: '1px solid var(--line)',
                     textAlign: 'center',
                   }}

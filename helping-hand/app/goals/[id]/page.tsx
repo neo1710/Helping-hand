@@ -1894,20 +1894,20 @@ function GoalJourneyContent() {
                     )}
 
                     {/* Mini Stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                      <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'clamp(6px, 1.5vw, 8px)' }}>
+                      <div style={{ background: 'var(--bg)', padding: '10px 6px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>
                           {inspectedProfile.stats?.totalGoals || 0}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>Total Goals</div>
                       </div>
-                      <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
+                      <div style={{ background: 'var(--bg)', padding: '10px 6px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, color: '#3fcf8e' }}>
                           {inspectedProfile.stats?.completedGoals || 0}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>Completed</div>
                       </div>
-                      <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
+                      <div style={{ background: 'var(--bg)', padding: '10px 6px', borderRadius: 10, border: '1px solid var(--line)', textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b' }}>
                           {inspectedProfile.stats?.activeGoals || 0}
                         </div>
@@ -1935,11 +1935,11 @@ function GoalJourneyContent() {
                     </div>
 
                     {/* Full Profile Link */}
-                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
                       <Link
                         href={`/profile/${encodeURIComponent(inspectedProfile.user.username)}`}
                         style={{
-                          flex: 1,
+                          flex: '1 1 180px',
                           background: 'var(--brand)',
                           color: '#fff',
                           padding: '11px',
@@ -1952,6 +1952,7 @@ function GoalJourneyContent() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: 6,
+                          minHeight: 44,
                         }}
                       >
                         <span>View Full Profile Page</span>
@@ -1969,6 +1970,7 @@ function GoalJourneyContent() {
                           fontWeight: 600,
                           fontSize: 13.5,
                           cursor: 'pointer',
+                          minHeight: 44,
                         }}
                       >
                         Close

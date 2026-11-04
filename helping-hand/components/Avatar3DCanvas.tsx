@@ -669,7 +669,7 @@ export default function Avatar3DCanvas({
         position: 'relative',
         width: '100%',
         height: '100%',
-        minHeight: 380,
+        minHeight: 300,
         borderRadius: 24,
         overflow: 'hidden',
         background: 'radial-gradient(circle at 50% 40%, rgba(59, 130, 246, 0.12), transparent 70%), var(--surface)',
@@ -806,6 +806,7 @@ export default function Avatar3DCanvas({
 
       {/* Helper touch hint */}
       <div
+        className="hidden-mobile"
         style={{
           position: 'absolute',
           bottom: 14,
