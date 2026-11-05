@@ -16,21 +16,34 @@ function recalculateGoalProgress(goal: any) {
       .filter((m: any) => m.status === 'active')
       .reduce((sum: number, m: any) => sum + (Number(m.progress) || 0), 0);
     goal.progress = Math.min(goal.target, Math.max(0, totalProgress));
+    if (goal.progress >= goal.target) {
+      goal.status = 'completed';
+    } else if (goal.status === 'completed') {
+      goal.status = 'active';
+    }
   } else if (goal.goalType === 'personal') {
     const creatorMember = goal.members.find((m: any) => m.role === 'creator') || goal.members[0];
     goal.progress = creatorMember ? creatorMember.progress : 0;
+    if (goal.progress >= goal.target) {
+      goal.status = 'completed';
+    } else if (goal.status === 'completed') {
+      goal.status = 'active';
+    }
   } else {
     // competitive or open
     const activeMembers = goal.members.filter((m: any) => m.status === 'active');
     goal.progress = activeMembers.length > 0
       ? Math.max(...activeMembers.map((m: any) => Number(m.progress) || 0))
       : 0;
-  }
 
-  if (goal.progress >= goal.target) {
-    goal.status = 'completed';
-  } else if (goal.status === 'completed') {
-    goal.status = 'active';
+    const allCompleted = activeMembers.length > 0 && activeMembers.every((m: any) => (m.progress || 0) >= goal.target);
+    const isEnded = new Date() > new Date(goal.endDate);
+
+    if (allCompleted || isEnded) {
+      goal.status = 'completed';
+    } else if (goal.status === 'completed' && !isEnded) {
+      goal.status = 'active';
+    }
   }
 }
 
@@ -63,9 +76,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
-    // Check if open goal deadline expired
-    if (goal.goalType === 'open' && new Date() > new Date(goal.endDate)) {
-      return NextResponse.json({ error: 'This open goal has passed its deadline.' }, { status: 400 });
+    const now = new Date();
+    if (now > new Date(goal.endDate)) {
+      return NextResponse.json({ error: 'This goal has passed its deadline. Logs cannot be modified.' }, { status: 400 });
+    }
+    if (now < new Date(goal.startDate)) {
+      return NextResponse.json({ error: 'This goal has not started yet.' }, { status: 400 });
     }
 
     // Find the log entry in goal.log
@@ -173,6 +189,14 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     const goal = await Goal.findById(id);
     if (!goal) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+    }
+
+    const now = new Date();
+    if (now > new Date(goal.endDate)) {
+      return NextResponse.json({ error: 'This goal has passed its deadline. Logs cannot be deleted.' }, { status: 400 });
+    }
+    if (now < new Date(goal.startDate)) {
+      return NextResponse.json({ error: 'This goal has not started yet.' }, { status: 400 });
     }
 
     // Find the log entry in goal.log

@@ -79,15 +79,20 @@ function getStatus(goal: Goal): { label: string; color: string; icon: typeof FiC
   if (goal.status === 'abandoned') return { label: 'Abandoned', color: '#ff7b7b', icon: FiAlertCircle };
 
   const now = new Date();
+  const start = new Date(goal.startDate);
   const end = new Date(goal.endDate);
 
-  if (goal.goalType === 'open' && now > end) {
-    return { label: 'Expired', color: '#9ca3af', icon: FiClock };
+  if (now < start) {
+    return { label: 'Upcoming', color: '#818cf8', icon: FiClock };
+  }
+
+  if (now > end) {
+    return { label: 'Ended', color: '#9ca3af', icon: FiClock };
   }
 
   const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   const pct = goal.target > 0 ? (goal.progress / goal.target) * 100 : 0;
-  const totalDays = Math.ceil((end.getTime() - new Date(goal.startDate).getTime()) / (1000 * 60 * 60 * 24));
+  const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
   const daysPassed = totalDays - daysLeft;
   const expectedPct = totalDays > 0 ? (daysPassed / totalDays) * 100 : 0;
 
@@ -497,7 +502,10 @@ export default function GoalsPage() {
             {goals.map((goal, idx) => {
               const statusInfo = getStatus(goal);
               const pct = goal.target > 0 ? Math.min(100, Math.round((goal.progress / goal.target) * 100)) : 0;
+              const isUpcoming = new Date(goal.startDate).getTime() > Date.now();
+              const isEnded = new Date(goal.endDate).getTime() < Date.now();
               const daysLeft = Math.max(0, Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+              const daysUntilStart = isUpcoming ? Math.max(1, Math.ceil((new Date(goal.startDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
               const av = goal.customAvatar?.skin || goal.customAvatar?.tone
                 ? {
                     name: goal.customAvatar.name || 'Hero',
@@ -708,7 +716,13 @@ export default function GoalsPage() {
                         <Avatar config={av} size={30} />
                         <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
                           <div>{goal.goalType !== 'personal' ? `${memberCount} participant${memberCount > 1 ? 's' : ''}` : 'Solo Journey'}</div>
-                          <div>{daysLeft} days left</div>
+                          <div>
+                            {isUpcoming
+                              ? `Starts in ${daysUntilStart}d`
+                              : isEnded
+                              ? 'Ended'
+                              : `${daysLeft} days left`}
+                          </div>
                         </div>
                       </div>
 

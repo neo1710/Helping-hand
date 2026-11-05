@@ -71,10 +71,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
           goal.progress = activeMembers.length > 0
             ? Math.max(...activeMembers.map(m => m.progress || 0))
             : 0;
-        }
 
-        if (goal.progress < goal.target && goal.status === 'completed') {
-          goal.status = 'active';
+          const allCompleted = activeMembers.length > 0 && activeMembers.every(m => (m.progress || 0) >= goal.target);
+          const isEnded = new Date() > new Date(goal.endDate);
+
+          if (allCompleted || isEnded) {
+            goal.status = 'completed';
+          } else if (goal.status === 'completed' && !isEnded) {
+            goal.status = 'active';
+          }
+        } else if (goal.goalType === 'personal') {
+          const creatorMember = goal.members.find(m => m.role === 'creator') || goal.members[0];
+          goal.progress = creatorMember ? creatorMember.progress : 0;
+          if (goal.progress >= goal.target) {
+            goal.status = 'completed';
+          } else if (goal.status === 'completed') {
+            goal.status = 'active';
+          }
         }
 
         await goal.save();

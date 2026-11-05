@@ -143,6 +143,8 @@ function GoalJourneyContent() {
   const [currentUserAvatar, setCurrentUserAvatar] = useState<any>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
+  const [isUpcoming, setIsUpcoming] = useState(false);
+  const [isEnded, setIsEnded] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<'active' | 'pending_approval' | 'invited' | 'none'>('none');
   const [userProgress, setUserProgress] = useState(0);
   const [rankings, setRankings] = useState<RankingItem[]>([]);
@@ -209,6 +211,8 @@ function GoalJourneyContent() {
         setCurrentUserAvatar(data.currentUserAvatar || data.currentUserProfile?.customAvatar || null);
         setIsCreator(data.isCreator || false);
         setIsExpired(data.isExpired || false);
+        setIsUpcoming(data.isUpcoming || false);
+        setIsEnded(data.isEnded || false);
         setMembershipStatus(data.membershipStatus || 'none');
         setUserProgress(data.userProgress ?? data.goal.progress);
         setRankings(data.rankings || []);
@@ -458,14 +462,26 @@ function GoalJourneyContent() {
     );
   }
 
+  const now = new Date();
+  const isGoalUpcoming = isUpcoming || (goal ? new Date(goal.startDate).getTime() > now.getTime() : false);
+  const isGoalEnded = isEnded || isExpired || (goal ? new Date(goal.endDate).getTime() < now.getTime() : false);
+  const isGoalCompleted = goal.status === 'completed';
+
   const displayProgress = goal.goalType === 'competitive' || goal.goalType === 'open'
     ? userProgress
     : goal.progress;
 
+  const hasUserCompleted = (goal.goalType === 'competitive' || goal.goalType === 'open')
+    ? (userProgress >= goal.target)
+    : (goal.progress >= goal.target);
+
   const pct = goal.target > 0 ? Math.min(100, Math.round((displayProgress / goal.target) * 100)) : 0;
   const daysTotal = daysBetween(goal.startDate, goal.endDate);
-  const nowStr = new Date().toISOString();
+  const nowStr = now.toISOString();
   const daysRemaining = Math.max(0, daysBetween(nowStr, goal.endDate));
+  const daysUntilStart = isGoalUpcoming
+    ? Math.max(1, Math.ceil((new Date(goal.startDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   const numCheckpoints = goal.checkpoints || 4;
   const checkpointsList = Array.from({ length: numCheckpoints }).map((_, i) => {
@@ -791,31 +807,77 @@ function GoalJourneyContent() {
                   </span>
                 )}
 
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: '3px 10px',
-                    borderRadius: 20,
-                    background: goal.status === 'completed' ? 'rgba(63, 207, 142, 0.15)' : 'rgba(255,255,255,0.06)',
-                    color: goal.status === 'completed' ? '#3fcf8e' : 'var(--ink-muted)',
-                  }}
-                >
-                  {goal.status}
-                </span>
-
-                {isExpired && (
+                {isGoalUpcoming ? (
                   <span
                     style={{
                       fontSize: 11,
                       fontWeight: 700,
                       padding: '3px 10px',
                       borderRadius: 20,
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      color: '#f87171',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      color: '#818cf8',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                     }}
                   >
-                    Deadline Expired
+                    <FiClock style={{ fontSize: 11 }} />
+                    <span>Upcoming • Starts in {daysUntilStart}d</span>
+                  </span>
+                ) : isGoalEnded ? (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      background: 'rgba(156, 163, 175, 0.15)',
+                      color: '#9ca3af',
+                      border: '1px solid var(--line)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <FiClock style={{ fontSize: 11 }} />
+                    <span>Ended</span>
+                  </span>
+                ) : isGoalCompleted ? (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      background: 'rgba(63, 207, 142, 0.15)',
+                      color: '#3fcf8e',
+                      border: '1px solid rgba(63, 207, 142, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <FiCheckCircle style={{ fontSize: 11 }} />
+                    <span>Completed</span>
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      background: 'rgba(63, 207, 142, 0.12)',
+                      color: '#3fcf8e',
+                      border: '1px solid rgba(63, 207, 142, 0.25)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <FiCheckCircle style={{ fontSize: 11 }} />
+                    <span>Active</span>
                   </span>
                 )}
 
@@ -848,7 +910,13 @@ function GoalJourneyContent() {
                 </span>
                 <span>•</span>
                 <span>
-                  Days Remaining: <strong style={{ color: 'var(--ink)' }}>{daysRemaining} of {daysTotal}</strong>
+                  {isGoalUpcoming ? (
+                    <>Starts in: <strong style={{ color: '#818cf8' }}>{daysUntilStart} {daysUntilStart === 1 ? 'day' : 'days'}</strong></>
+                  ) : isGoalEnded ? (
+                    <>Duration: <strong style={{ color: 'var(--ink)' }}>Ended ({daysTotal} days total)</strong></>
+                  ) : (
+                    <>Days Remaining: <strong style={{ color: 'var(--ink)' }}>{daysRemaining} of {daysTotal}</strong></>
+                  )}
                 </span>
                 <span>•</span>
                 <span>
@@ -1110,11 +1178,32 @@ function GoalJourneyContent() {
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14 }}>
-                        {r.progress} {goal.unit}
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {r.progress >= goal.target && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: '2px 7px',
+                              borderRadius: 12,
+                              background: 'rgba(63, 207, 142, 0.15)',
+                              color: '#3fcf8e',
+                              border: '1px solid rgba(63, 207, 142, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                            }}
+                          >
+                            <FiCheckCircle style={{ fontSize: 11 }} />
+                            <span>Finished!</span>
+                          </span>
+                        )}
+                        <span style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14 }}>
+                          {r.progress} {goal.unit}
+                        </span>
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--brand)', fontWeight: 700 }}>
+                      <div style={{ fontSize: 11.5, color: r.progress >= goal.target ? '#3fcf8e' : 'var(--brand)', fontWeight: 700 }}>
                         {r.percentage}% of target
                       </div>
                     </div>
@@ -1366,129 +1455,246 @@ function GoalJourneyContent() {
               border: '1px solid var(--line)',
               borderRadius: 20,
               padding: 'clamp(18px, 3vw, 26px)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
             }}
           >
-            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4, color: 'var(--ink)' }}>
-              Log Your Progress
-            </h3>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 16 }}>
-              Advance along the roadmap and unlock rewards as you hit checkpoints!
-            </p>
+            <div>
+              <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4, color: 'var(--ink)' }}>
+                Log Your Progress
+              </h3>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 16 }}>
+                Advance along the roadmap and unlock rewards as you hit checkpoints!
+              </p>
 
-            {/* Quick 4-button touch grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: 8,
-                marginBottom: 14,
-              }}
-            >
-              {[1, 5, 10, 25].map(inc => (
-                <button
-                  key={inc}
-                  type="button"
-                  onClick={() => handleLog(inc)}
-                  disabled={logging || goal.status === 'completed' || isExpired}
+              {membershipStatus !== 'active' && !isCreator ? (
+                <div
                   style={{
-                    padding: '8px 4px',
                     background: 'var(--bg)',
-                    border: '1.5px solid var(--line)',
-                    borderRadius: 10,
-                    color: 'var(--ink)',
-                    fontSize: 13,
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    minHeight: 46,
+                    border: '1px solid var(--line)',
+                    borderRadius: 16,
+                    padding: '24px 18px',
                     textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: 1.2,
                   }}
                 >
-                  <span>+{inc}</span>
-                  <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 600 }}>{goal.unit}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Custom Amount Form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>
-                  Custom Amount ({goal.unit})
-                </label>
-                <input
-                  type="number"
-                  min="0.1"
-                  step="any"
-                  placeholder="e.g. 15"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  disabled={logging || goal.status === 'completed' || isExpired}
+                  <FiLock style={{ fontSize: 28, color: 'var(--ink-muted)', marginBottom: 8 }} />
+                  <h4 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Join to Log Progress</h4>
+                  <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4, marginBottom: 14 }}>
+                    You must be an active participant of this goal to record milestone progress.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleJoinGoal}
+                    disabled={joining || isGoalEnded}
+                    style={{
+                      background: 'var(--brand)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '10px 20px',
+                      borderRadius: 10,
+                      fontWeight: 700,
+                      fontSize: 13.5,
+                      cursor: isGoalEnded ? 'not-allowed' : 'pointer',
+                      opacity: isGoalEnded ? 0.6 : 1,
+                    }}
+                  >
+                    {joining ? 'Joining...' : 'Join Goal'}
+                  </button>
+                </div>
+              ) : isGoalUpcoming ? (
+                <div
                   style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    borderRadius: 10,
-                    border: '1.5px solid var(--line)',
-                    background: 'var(--bg)',
-                    color: 'var(--ink)',
-                    fontSize: 15,
-                    outline: 'none',
-                    minHeight: 44,
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1.5px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: 16,
+                    padding: '24px 18px',
+                    textAlign: 'center',
                   }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>
-                  Note / Reflection (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Morning sprint in the park"
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                  disabled={logging || goal.status === 'completed' || isExpired}
+                >
+                  <FiClock style={{ fontSize: 32, color: '#818cf8', marginBottom: 10 }} />
+                  <h4 style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>Goal Starts on {formatDate(goal.startDate)}</h4>
+                  <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+                    This goal is scheduled to begin in <strong style={{ color: '#818cf8' }}>{daysUntilStart} {daysUntilStart === 1 ? 'day' : 'days'}</strong>.
+                    Progress logging will unlock automatically as soon as the goal starts!
+                  </p>
+                </div>
+              ) : isGoalEnded ? (
+                <div
                   style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    borderRadius: 10,
+                    background: 'rgba(156, 163, 175, 0.08)',
                     border: '1.5px solid var(--line)',
-                    background: 'var(--bg)',
-                    color: 'var(--ink)',
-                    fontSize: 14,
-                    outline: 'none',
-                    minHeight: 44,
+                    borderRadius: 16,
+                    padding: '24px 18px',
+                    textAlign: 'center',
                   }}
-                />
-              </div>
+                >
+                  <FiClock style={{ fontSize: 32, color: 'var(--ink-muted)', marginBottom: 10 }} />
+                  <h4 style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>Goal Journey Ended</h4>
+                  <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+                    The deadline for this goal passed on {formatDate(goal.endDate)}. Further progress logs are closed.
+                  </p>
+                </div>
+              ) : hasUserCompleted ? (
+                <div
+                  style={{
+                    background: 'rgba(63, 207, 142, 0.1)',
+                    border: '1.5px solid #3fcf8e',
+                    borderRadius: 16,
+                    padding: '24px 18px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <FiCheckCircle style={{ fontSize: 36, color: '#3fcf8e', marginBottom: 10 }} />
+                  <h4 style={{ fontSize: 16, fontWeight: 800, color: '#3fcf8e' }}>Target Completed! 🎉</h4>
+                  <p style={{ color: 'var(--ink)', fontSize: 13.5, fontWeight: 700, marginTop: 4 }}>
+                    You have reached 100% of your target ({userProgress} / {goal.target} {goal.unit})!
+                  </p>
+                  {goal.goalType === 'competitive' ? (
+                    <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, marginTop: 6, lineHeight: 1.5 }}>
+                      The competition continues for remaining competitors until everyone finishes or the deadline arrives. Check your ranking on the leaderboard above!
+                    </p>
+                  ) : (
+                    <p style={{ color: 'var(--ink-muted)', fontSize: 12.5, marginTop: 6, lineHeight: 1.5 }}>
+                      Outstanding work reaching the finish line. All milestone checkpoints unlocked!
+                    </p>
+                  )}
+                </div>
+              ) : isGoalCompleted ? (
+                <div
+                  style={{
+                    background: 'rgba(63, 207, 142, 0.1)',
+                    border: '1.5px solid #3fcf8e',
+                    borderRadius: 16,
+                    padding: '24px 18px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <FiCheckCircle style={{ fontSize: 36, color: '#3fcf8e', marginBottom: 10 }} />
+                  <h4 style={{ fontSize: 16, fontWeight: 800, color: '#3fcf8e' }}>Goal Completed! 🎉</h4>
+                  <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+                    The target has been achieved and this goal has concluded.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Quick 4-button touch grid */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: 8,
+                      marginBottom: 14,
+                    }}
+                  >
+                    {[1, 5, 10, 25].map(inc => (
+                      <button
+                        key={inc}
+                        type="button"
+                        onClick={() => handleLog(inc)}
+                        disabled={logging}
+                        style={{
+                          padding: '8px 4px',
+                          background: 'var(--bg)',
+                          border: '1.5px solid var(--line)',
+                          borderRadius: 10,
+                          color: 'var(--ink)',
+                          fontSize: 13,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          minHeight: 46,
+                          textAlign: 'center',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        <span>+{inc}</span>
+                        <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 600 }}>{goal.unit}</span>
+                      </button>
+                    ))}
+                  </div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => handleLog()}
-                disabled={logging || !amount || Number(amount) <= 0 || goal.status === 'completed' || isExpired}
-                style={{
-                  background: 'var(--brand)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '13px',
-                  borderRadius: 12,
-                  fontWeight: 800,
-                  fontSize: 14.5,
-                  cursor: logging || !amount ? 'not-allowed' : 'pointer',
-                  opacity: logging || !amount ? 0.6 : 1,
-                  boxShadow: '0 4px 14px var(--neon-glow)',
-                  marginTop: 4,
-                  minHeight: 46,
-                }}
-              >
-                {logging ? 'Recording...' : 'Log Progress'}
-              </motion.button>
+                  {/* Custom Amount Form */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>
+                        Custom Amount ({goal.unit})
+                      </label>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="any"
+                        placeholder="e.g. 15"
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        disabled={logging}
+                        style={{
+                          width: '100%',
+                          padding: '11px 14px',
+                          borderRadius: 10,
+                          border: '1.5px solid var(--line)',
+                          background: 'var(--bg)',
+                          color: 'var(--ink)',
+                          fontSize: 15,
+                          outline: 'none',
+                          minHeight: 44,
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>
+                        Note / Reflection (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Morning sprint in the park"
+                        value={note}
+                        onChange={e => setNote(e.target.value)}
+                        disabled={logging}
+                        style={{
+                          width: '100%',
+                          padding: '11px 14px',
+                          borderRadius: 10,
+                          border: '1.5px solid var(--line)',
+                          background: 'var(--bg)',
+                          color: 'var(--ink)',
+                          fontSize: 14,
+                          outline: 'none',
+                          minHeight: 44,
+                        }}
+                      />
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="button"
+                      onClick={() => handleLog()}
+                      disabled={logging || !amount || Number(amount) <= 0}
+                      style={{
+                        background: 'var(--brand)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '13px',
+                        borderRadius: 12,
+                        fontWeight: 800,
+                        fontSize: 14.5,
+                        cursor: logging || !amount ? 'not-allowed' : 'pointer',
+                        opacity: logging || !amount ? 0.6 : 1,
+                        boxShadow: '0 4px 14px var(--neon-glow)',
+                        marginTop: 4,
+                        minHeight: 46,
+                      }}
+                    >
+                      {logging ? 'Recording...' : 'Log Progress'}
+                    </motion.button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -1516,9 +1722,10 @@ function GoalJourneyContent() {
               ) : (
                 [...goal.log].reverse().map((entry, idx) => {
                   const canManage =
-                    (entry.userId && entry.userId === currentUserId) ||
-                    (entry.username && entry.username === currentUsername) ||
-                    isCreator;
+                    (((entry.userId && entry.userId === currentUserId) ||
+                      (entry.username && entry.username === currentUsername) ||
+                      isCreator) &&
+                      !isGoalEnded);
                   return (
                     <div
                       key={entry._id || idx}

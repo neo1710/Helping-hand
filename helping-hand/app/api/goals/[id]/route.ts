@@ -29,8 +29,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
-    // Check if open goal is expired
-    const isExpired = goal.goalType === 'open' && new Date() > new Date(goal.endDate);
+    // Check if goal is expired or upcoming
+    const now = new Date();
+    const isUpcoming = new Date(goal.startDate) > now;
+    const isEnded = new Date(goal.endDate) < now;
+    const isExpired = isEnded;
 
     // Find current user's membership
     const userMember = goal.members?.find(
@@ -70,6 +73,8 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       currentUserProfile: currentUser,
       currentUserAvatar: currentUser.customAvatar || null,
       isCreator,
+      isUpcoming,
+      isEnded,
       isExpired,
       membershipStatus: userMember ? userMember.status : 'none',
       userProgress: userMember?.progress ?? goal.progress,
@@ -100,10 +105,24 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const { amount, note, status } = body;
+    const now = new Date();
 
-    // Check if open goal is expired
-    if (goal.goalType === 'open' && new Date() > new Date(goal.endDate)) {
-      return NextResponse.json({ error: 'This open goal has passed its deadline.' }, { status: 400 });
+    // Check if goal has not started yet
+    if (now < new Date(goal.startDate)) {
+      const startStr = new Date(goal.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return NextResponse.json(
+        { error: `This goal has not started yet. Logging progress will unlock on ${startStr}.` },
+        { status: 400 }
+      );
+    }
+
+    // Check if goal deadline has passed (for all goals)
+    if (now > new Date(goal.endDate)) {
+      const endStr = new Date(goal.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return NextResponse.json(
+        { error: `This goal reached its deadline on ${endStr}. Progress logging is closed.` },
+        { status: 400 }
+      );
     }
 
     // Find or add current user as member
@@ -160,6 +179,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     if (typeof amount === 'number' && amount > 0) {
+      // Check if user has already completed the goal target
+      if ((member.progress || 0) >= goal.target) {
+        return NextResponse.json(
+          { error: 'You have already reached 100% of your target for this goal! Congratulations on finishing your journey.' },
+          { status: 400 }
+        );
+      }
+
+      // Check if non-competitive goal is already completed
+      if (goal.status === 'completed' && goal.goalType !== 'competitive' && goal.goalType !== 'open') {
+        return NextResponse.json(
+          { error: 'This goal has already been completed.' },
+          { status: 400 }
+        );
+      }
+
       const logId = new mongoose.Types.ObjectId();
       const entry = {
         _id: logId,
@@ -186,18 +221,30 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           .filter(m => m.status === 'active')
           .reduce((sum, m) => sum + (m.progress || 0), 0);
         goal.progress = Math.min(goal.target, totalProgress);
+        if (goal.progress >= goal.target) {
+          goal.status = 'completed';
+        }
       } else if (goal.goalType === 'personal') {
         goal.progress = member.progress;
+        if (goal.progress >= goal.target) {
+          goal.status = 'completed';
+        }
       } else {
         // competitive or open: goal progress represents the top/highest member progress
-        const maxProgress = Math.max(
-          ...goal.members.filter(m => m.status === 'active').map(m => m.progress || 0)
-        );
+        const activeMembers = goal.members.filter(m => m.status === 'active');
+        const maxProgress = activeMembers.length > 0
+          ? Math.max(...activeMembers.map(m => m.progress || 0))
+          : 0;
         goal.progress = maxProgress;
-      }
 
-      if (goal.progress >= goal.target) {
-        goal.status = 'completed';
+        // Competitive goal does NOT close when 1 player completes.
+        // It waits for ALL active players to reach the target, OR for the end date to arrive.
+        const allCompleted = activeMembers.length > 0 && activeMembers.every(m => (m.progress || 0) >= goal.target);
+        const isEnded = new Date() > new Date(goal.endDate);
+
+        if (allCompleted || isEnded) {
+          goal.status = 'completed';
+        }
       }
     }
 
