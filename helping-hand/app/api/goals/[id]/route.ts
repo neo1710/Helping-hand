@@ -104,10 +104,72 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
-    const { amount, note, status } = body;
+    const { amount, note, status, endDate } = body;
     const now = new Date();
 
-    // Check if goal has not started yet
+    const isCreator =
+      goal.creatorUserId === currentUser.auth0Id ||
+      goal.userId === currentUser.auth0Id ||
+      String(goal.creator) === String(currentUser._id) ||
+      goal.members.some(m => m.auth0Id === currentUser.auth0Id && m.role === 'creator');
+
+    // ── Extend End Date (Creator Only, Goal Not Completed) ──
+    if (endDate) {
+      if (!isCreator) {
+        return NextResponse.json(
+          { error: 'Only the creator of the goal can extend its deadline.' },
+          { status: 403 }
+        );
+      }
+
+      if (goal.status === 'completed') {
+        return NextResponse.json(
+          { error: 'Cannot extend the deadline of an already completed goal.' },
+          { status: 400 }
+        );
+      }
+
+      const newEnd = new Date(endDate);
+      if (isNaN(newEnd.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid deadline date format.' },
+          { status: 400 }
+        );
+      }
+
+      if (newEnd <= new Date(goal.startDate)) {
+        return NextResponse.json(
+          { error: 'New deadline must be after the goal start date.' },
+          { status: 400 }
+        );
+      }
+
+      if (newEnd <= now) {
+        return NextResponse.json(
+          { error: 'New deadline must be in the future.' },
+          { status: 400 }
+        );
+      }
+
+      goal.endDate = newEnd;
+
+      // Reactivate goal since the deadline has been extended
+      goal.status = 'active';
+
+      await goal.save();
+
+      const populated = await Goal.findById(goal._id)
+        .populate('creator', 'username name picture bio')
+        .populate('members.user', 'username name picture bio')
+        .lean();
+
+      return NextResponse.json({
+        message: 'Goal deadline extended successfully!',
+        goal: populated,
+      });
+    }
+
+    // Check if goal has not started yet (for logging progress)
     if (now < new Date(goal.startDate)) {
       const startStr = new Date(goal.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       return NextResponse.json(
@@ -116,7 +178,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // Check if goal deadline has passed (for all goals)
+    // Check if goal deadline has passed (for logging progress)
     if (now > new Date(goal.endDate)) {
       const endStr = new Date(goal.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       return NextResponse.json(
@@ -249,11 +311,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     if (status && ['active', 'completed', 'abandoned'].includes(status)) {
-      const isCreator =
-        goal.creatorUserId === currentUser.auth0Id ||
-        String(goal.creator) === String(currentUser._id) ||
-        member.role === 'creator';
-
       if (!isCreator && status !== 'completed') {
         return NextResponse.json(
           { error: 'Only the creator can change the goal status.' },

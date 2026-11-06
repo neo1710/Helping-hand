@@ -21,6 +21,7 @@ import {
   FiLogOut,
   FiEdit2,
   FiArrowRight,
+  FiCalendar,
 } from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
 import Avatar, { AvatarConfig } from '@/components/Avatar';
@@ -172,6 +173,12 @@ function GoalJourneyContent() {
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Extend Deadline state (Creator only, when goal not completed)
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
+  const [newEndDate, setNewEndDate] = useState('');
+  const [savingExtension, setSavingExtension] = useState(false);
+  const [extensionError, setExtensionError] = useState('');
 
   // User Profile Inspection state
   const [inspectingUsername, setInspectingUsername] = useState<string | null>(null);
@@ -405,6 +412,54 @@ function GoalJourneyContent() {
       }
     } catch {
       alert('Network error updating member.');
+    }
+  };
+
+  const handleSetExtensionPreset = (days: number) => {
+    const base = goal?.endDate ? new Date(goal.endDate) : new Date();
+    const startFrom = base.getTime() > Date.now() ? base : new Date();
+    const target = new Date(startFrom);
+    target.setDate(target.getDate() + days);
+    setNewEndDate(target.toISOString().split('T')[0]);
+  };
+
+  const handleSaveExtension = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEndDate) {
+      setExtensionError('Please pick a new deadline date.');
+      return;
+    }
+    const newDateObj = new Date(newEndDate);
+    if (newDateObj <= new Date()) {
+      setExtensionError('New deadline must be in the future.');
+      return;
+    }
+    if (goal && newDateObj <= new Date(goal.startDate)) {
+      setExtensionError('New deadline must be after the start date.');
+      return;
+    }
+
+    setSavingExtension(true);
+    setExtensionError('');
+    try {
+      const res = await fetch(`/api/goals/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endDate: newEndDate }),
+      });
+      const data = await res.json();
+      if (res.ok && data.goal) {
+        setGoal(data.goal);
+        setExtendingDeadline(false);
+        setNewEndDate('');
+        fetchGoalDetails();
+      } else {
+        setExtensionError(data.error || 'Failed to extend deadline');
+      }
+    } catch {
+      setExtensionError('Network error extending deadline.');
+    } finally {
+      setSavingExtension(false);
     }
   };
 
@@ -661,6 +716,34 @@ function GoalJourneyContent() {
               >
                 <FiCheck style={{ fontSize: 14 }} />
                 <span>Accept Invitation</span>
+              </button>
+            )}
+
+            {isCreator && !isGoalCompleted && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewEndDate('');
+                  setExtensionError('');
+                  setExtendingDeadline(true);
+                }}
+                style={{
+                  background: 'var(--brand-soft)',
+                  border: '1px solid var(--brand)',
+                  color: 'var(--brand)',
+                  borderRadius: 10,
+                  padding: '7px 14px',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  minHeight: 38,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <FiCalendar style={{ fontSize: 13 }} />
+                <span>Extend Deadline</span>
               </button>
             )}
 
@@ -1534,6 +1617,38 @@ function GoalJourneyContent() {
                   <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
                     The deadline for this goal passed on {formatDate(goal.endDate)}. Further progress logs are closed.
                   </p>
+                  {isCreator && !isGoalCompleted && (
+                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                      <p style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginBottom: 10 }}>
+                        Target was not completed. As the creator, you can extend the deadline to give participants more time to finish.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewEndDate('');
+                          setExtensionError('');
+                          setExtendingDeadline(true);
+                        }}
+                        style={{
+                          background: 'var(--brand)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '9px 18px',
+                          borderRadius: 10,
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          minHeight: 40,
+                        }}
+                      >
+                        <FiCalendar style={{ fontSize: 14 }} />
+                        <span>Extend Deadline</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : hasUserCompleted ? (
                 <div
@@ -2185,6 +2300,230 @@ function GoalJourneyContent() {
                     </div>
                   </div>
                 ) : null}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Extend Deadline Modal (Creator Only, Goal Not Completed) */}
+        <AnimatePresence>
+          {extendingDeadline && isCreator && !isGoalCompleted && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0, 0, 0, 0.75)',
+                backdropFilter: 'blur(6px)',
+                zIndex: 1000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 'clamp(12px, 3vw, 20px)',
+              }}
+              onClick={() => setExtendingDeadline(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 14 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 14 }}
+                transition={{ duration: 0.2 }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 20,
+                  padding: 'clamp(18px, 4vw, 28px)',
+                  width: '100%',
+                  maxWidth: 460,
+                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        background: 'var(--brand-soft)',
+                        color: 'var(--brand)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <FiCalendar />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: 'clamp(16px, 4vw, 18px)', fontWeight: 800, color: 'var(--ink)' }}>
+                        Extend Goal Deadline
+                      </h3>
+                      <p style={{ color: 'var(--ink-muted)', fontSize: 12, marginTop: 2 }}>
+                        Set a new future deadline date for your participants.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setExtendingDeadline(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--ink-muted)',
+                      fontSize: 18,
+                      cursor: 'pointer',
+                      padding: 4,
+                    }}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+
+                {/* Current Deadline Info */}
+                <div
+                  style={{
+                    background: 'var(--bg)',
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    border: '1px solid var(--line)',
+                    marginBottom: 16,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>Current Deadline:</span>
+                  <strong style={{ fontSize: 13, color: isGoalEnded ? '#f87171' : 'var(--ink)' }}>
+                    {formatDate(goal.endDate)} {isGoalEnded && '(Ended)'}
+                  </strong>
+                </div>
+
+                <form onSubmit={handleSaveExtension} style={{ display: 'grid', gap: 14 }}>
+                  {/* Quick Extension Presets */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--ink-muted)', marginBottom: 6 }}>
+                      Quick Extension Presets:
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {[
+                        { label: '+7 Days', days: 7 },
+                        { label: '+14 Days', days: 14 },
+                        { label: '+30 Days', days: 30 },
+                        { label: '+60 Days', days: 60 },
+                        { label: '+90 Days', days: 90 },
+                      ].map(p => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => handleSetExtensionPreset(p.days)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: 18,
+                            border: '1px solid var(--line)',
+                            background: 'var(--surface-raised)',
+                            color: 'var(--ink)',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <FiCalendar style={{ fontSize: 11 }} />
+                          <span>{p.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* New Deadline Input */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
+                      New Deadline Date <span style={{ color: 'var(--brand)' }}>*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={newEndDate}
+                      onChange={e => setNewEndDate(e.target.value)}
+                      min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '11px 14px',
+                        borderRadius: 12,
+                        border: '1.5px solid var(--line)',
+                        background: 'var(--bg)',
+                        color: 'var(--ink)',
+                        fontSize: 15,
+                        outline: 'none',
+                        minHeight: 46,
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  {extensionError && (
+                    <div
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: 10,
+                        padding: '9px 12px',
+                        color: '#f87171',
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {extensionError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                    <button
+                      type="submit"
+                      disabled={savingExtension || !newEndDate}
+                      style={{
+                        flex: 1,
+                        background: 'var(--brand)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '12px',
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        cursor: savingExtension || !newEndDate ? 'not-allowed' : 'pointer',
+                        opacity: savingExtension || !newEndDate ? 0.6 : 1,
+                        minHeight: 44,
+                      }}
+                    >
+                      {savingExtension ? 'Saving New Deadline...' : 'Confirm Extension'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExtendingDeadline(false)}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid var(--line)',
+                        color: 'var(--ink-muted)',
+                        padding: '12px 18px',
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        fontSize: 13.5,
+                        cursor: 'pointer',
+                        minHeight: 44,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </motion.div>
             </div>
           )}
