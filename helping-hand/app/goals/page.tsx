@@ -184,9 +184,10 @@ export default function GoalsPage() {
 
       <main
         style={{
-          maxWidth: 1200,
+          maxWidth: '100%',
           margin: '0 auto',
-          padding: 'clamp(24px, 4vw, 48px) clamp(16px, 3vw, 24px) 80px',
+          padding: 'clamp(20px, 3vw, 40px) clamp(16px, 3vw, 44px) 80px',
+          boxSizing: 'border-box',
         }}
       >
         {/* Header Row */}

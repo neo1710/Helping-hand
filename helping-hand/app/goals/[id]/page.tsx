@@ -22,6 +22,8 @@ import {
   FiEdit2,
   FiArrowRight,
   FiCalendar,
+  FiPlusCircle,
+  FiTarget,
 } from 'react-icons/fi';
 import Navbar from '@/components/Navbar';
 import Avatar, { AvatarConfig } from '@/components/Avatar';
@@ -554,15 +556,70 @@ function GoalJourneyContent() {
   const pendingRequests = goal.members?.filter(m => m.status === 'pending_approval') || [];
   const activeMembers = goal.members?.filter(m => m.status === 'active') || [];
 
+  const effectiveRankings = (() => {
+    if (rankings && rankings.length > 0) {
+      return rankings;
+    }
+
+    if (activeMembers && activeMembers.length > 0) {
+      return [...activeMembers]
+        .map(m => {
+          const u = m.user;
+          const prog = m.progress || 0;
+          const pct = goal.target > 0 ? Math.min(100, Math.round((prog / goal.target) * 100)) : 0;
+          return {
+            memberId: m._id,
+            userId: m.auth0Id,
+            name: u?.name || 'Member',
+            username: u?.username || 'member',
+            progress: prog,
+            percentage: pct,
+            picture: u?.picture || '',
+            joinedAt: m.joinedAt || '',
+            role: m.role || 'member',
+            customAvatar: m.customAvatar,
+          };
+        })
+        .sort((a, b) => b.progress - a.progress);
+    }
+
+    // Fallback for personal / solo goals
+    const myName = currentUsername || goal.creator?.name || 'You';
+    const myUsername = currentUsername || goal.creator?.username || 'you';
+    const myProg = displayProgress || 0;
+    const myPct = goal.target > 0 ? Math.min(100, Math.round((myProg / goal.target) * 100)) : 0;
+    return [
+      {
+        memberId: 'self',
+        userId: currentUserId || 'self',
+        name: myName,
+        username: myUsername,
+        progress: myProg,
+        percentage: myPct,
+        picture: goal.creator?.picture || '',
+        joinedAt: goal.startDate || '',
+        role: 'creator',
+        customAvatar: currentUserAvatar || goal.customAvatar,
+      },
+    ];
+  })();
+
+  const myRankIndex = effectiveRankings.findIndex(
+    r => r.userId === currentUserId || (currentUsername && r.username === currentUsername) || r.memberId === 'self'
+  );
+  const top3 = effectiveRankings.slice(0, 3);
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
       <Navbar />
 
       <main
         style={{
-          maxWidth: 1100,
+          maxWidth: '100%',
           margin: '0 auto',
-          padding: 'clamp(20px, 4vw, 40px) clamp(16px, 3vw, 24px) 80px',
+          padding: 'clamp(18px, 2.5vw, 36px) clamp(16px, 3vw, 44px) 80px',
+          boxSizing: 'border-box',
+          width: '100%',
         }}
       >
         {/* Top Back & Action Row */}
@@ -823,19 +880,22 @@ function GoalJourneyContent() {
           )}
         </AnimatePresence>
 
-        {/* Hero Banner (Responsive 2-col or stacked) */}
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--line)',
-            borderRadius: 20,
-            padding: 'clamp(18px, 3.5vw, 28px)',
-            marginBottom: 28,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
-          }}
-        >
+        {/* Full-width Responsive Two-Column Layout (Main Journey + Right Sidebar for Leaderboard) */}
+        <div className="goal-page-layout">
+          {/* ── Left Column (Main Journey) ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, width: '100%' }}>
+            {/* Hero Banner (Responsive 2-col or stacked) */}
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--line)',
+                borderRadius: 20,
+                padding: 'clamp(18px, 3.5vw, 28px)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 20,
+              }}
+            >
           <div
             style={{
               display: 'flex',
@@ -1122,417 +1182,11 @@ function GoalJourneyContent() {
           />
         </div>
 
-        {/* ── Checkpoints & Rewards Grid (1 to 3 columns responsively) ── */}
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--line)',
-            borderRadius: 20,
-            padding: 'clamp(18px, 3vw, 26px)',
-            marginBottom: 28,
-          }}
-        >
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FiGift style={{ fontSize: 20, color: 'var(--brand)' }} />
-              <span>Checkpoints & Rewards ({numCheckpoints} Milestones)</span>
-            </h2>
-            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
-              As you log progress towards your target, checkpoints automatically unlock and reveal your designated rewards.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 250px), 1fr))',
-              gap: 12,
-            }}
-          >
-            {checkpointsList.map(cp => (
-              <div
-                key={cp.index}
-                style={{
-                  background: cp.isReached ? 'rgba(63, 207, 142, 0.08)' : 'var(--bg)',
-                  borderRadius: 14,
-                  padding: '14px 16px',
-                  border: `1.5px solid ${cp.isReached ? '#3fcf8e' : 'var(--line)'}`,
-                  position: 'relative',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      padding: '2px 9px',
-                      borderRadius: 12,
-                      background: cp.isReached ? '#3fcf8e' : 'var(--line)',
-                      color: cp.isReached ? '#fff' : 'var(--ink-muted)',
-                    }}
-                  >
-                    Checkpoint {cp.index}
-                  </span>
-
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: cp.isReached ? '#3fcf8e' : 'var(--ink)' }}>
-                    {cp.value} {goal.unit}
-                  </span>
-                </div>
-
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 4, wordBreak: 'break-word' }}>
-                  {cp.reward}
-                </div>
-
-                <div style={{ fontSize: 11.5, color: cp.isReached ? '#3fcf8e' : 'var(--ink-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  {cp.isReached ? (
-                    <>
-                      <FiCheckCircle style={{ fontSize: 13 }} />
-                      <span>Unlocked! Enjoy your reward</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiLock style={{ fontSize: 12 }} />
-                      <span>Needs {(Math.max(0, cp.value - displayProgress)).toFixed(1)} {goal.unit} more</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Competitive Leaderboard ── */}
-        {goal.goalType === 'competitive' && (
-          <div
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--line)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 26px)',
-              marginBottom: 28,
-            }}
-          >
-            <div style={{ marginBottom: 16 }}>
-              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FiAward style={{ fontSize: 20, color: 'var(--brand)' }} />
-                <span>Competition Leaderboard & Standings</span>
-              </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
-                Real-time competitor standings. Log your progress to climb the leaderboard!
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gap: 8 }}>
-              {rankings.map((r, idx) => {
-                const rankBadge = idx === 0 ? '#1' : idx === 1 ? '#2' : idx === 2 ? '#3' : `#${idx + 1}`;
-                const isMe = r.userId === currentUserId || r.username === currentUsername;
-                return (
-                  <div
-                    key={r.memberId}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 16px',
-                      background: isMe ? 'var(--brand-soft)' : 'var(--bg)',
-                      borderRadius: 12,
-                      border: `1.5px solid ${isMe ? 'var(--brand)' : 'var(--line)'}`,
-                      flexWrap: 'wrap',
-                      gap: 8,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, minWidth: 46, color: 'var(--brand)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {idx === 0 && <FiAward style={{ fontSize: 15 }} />}
-                        <span>{rankBadge}</span>
-                      </span>
-                      <div
-                        onClick={() => openUserProfile(r.username)}
-                        style={{ cursor: 'pointer' }}
-                        title={`View @${r.username}'s profile`}
-                      >
-                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
-                          {r.name} {isMe && '(You)'}
-                        </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--brand)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                          @{r.username}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {r.progress >= goal.target && (
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              padding: '2px 7px',
-                              borderRadius: 12,
-                              background: 'rgba(63, 207, 142, 0.15)',
-                              color: '#3fcf8e',
-                              border: '1px solid rgba(63, 207, 142, 0.3)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 3,
-                            }}
-                          >
-                            <FiCheckCircle style={{ fontSize: 11 }} />
-                            <span>Finished!</span>
-                          </span>
-                        )}
-                        <span style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14 }}>
-                          {r.progress} {goal.unit}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 11.5, color: r.progress >= goal.target ? '#3fcf8e' : 'var(--brand)', fontWeight: 700 }}>
-                        {r.percentage}% of target
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── Collaborative Team Members ── */}
-        {goal.goalType === 'collaborative' && (
-          <div
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--line)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 26px)',
-              marginBottom: 28,
-            }}
-          >
-            <div style={{ marginBottom: 16 }}>
-              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FiUsers style={{ fontSize: 20, color: 'var(--brand)' }} />
-                <span>Collaborative Team Members</span>
-              </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
-                All active members contribute together to reach the target of {goal.target} {goal.unit}.
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
-                gap: 12,
-              }}
-            >
-              {activeMembers.map(m => {
-                const u = m.user;
-                const isMe = m.auth0Id === currentUserId;
-                return (
-                  <div
-                    key={m._id}
-                    onClick={() => u?.username && openUserProfile(u.username)}
-                    style={{
-                      background: 'var(--bg)',
-                      borderRadius: 14,
-                      padding: '14px 16px',
-                      border: '1px solid var(--line)',
-                      cursor: u?.username ? 'pointer' : 'default',
-                      transition: 'border-color 0.2s',
-                    }}
-                    title={u?.username ? `View @${u.username}'s profile` : ''}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
-                        {u?.name || 'Member'} {isMe && '(You)'}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          fontWeight: 700,
-                          padding: '2px 7px',
-                          borderRadius: 12,
-                          background: m.role === 'creator' ? 'var(--brand-soft)' : 'var(--surface)',
-                          color: m.role === 'creator' ? 'var(--brand)' : 'var(--ink-muted)',
-                        }}
-                      >
-                        {m.role}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--brand)', marginBottom: 6, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                      @{u?.username || 'member'}
-                    </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>
-                      Contributed: <strong style={{ color: 'var(--ink)' }}>{m.progress} {goal.unit}</strong>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── Creator Invites & Requests Management ── */}
-        {isCreator && goal.goalType !== 'personal' && (
-          <div
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--line)',
-              borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 26px)',
-              marginBottom: 28,
-              display: 'grid',
-              gap: 18,
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FiShield style={{ fontSize: 20, color: 'var(--brand)' }} />
-                <span>Goal Admin & Member Invitations</span>
-              </h2>
-              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
-                Invite users by their unique username (@username) or approve incoming join requests.
-              </p>
-            </div>
-
-            <form onSubmit={handleInviteUser} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', flex: '1 1 220px' }}>
-                <span
-                  style={{
-                    position: 'absolute',
-                    left: 14,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: 'var(--ink-muted)',
-                    fontWeight: 700,
-                  }}
-                >
-                  @
-                </span>
-                <input
-                  type="text"
-                  placeholder="Enter unique username to invite..."
-                  value={inviteUsername}
-                  onChange={e => setInviteUsername(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px 11px 34px',
-                    borderRadius: 12,
-                    border: '1.5px solid var(--line)',
-                    background: 'var(--bg)',
-                    color: 'var(--ink)',
-                    fontSize: 14,
-                    outline: 'none',
-                    minHeight: 44,
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={inviting || !inviteUsername.trim()}
-                style={{
-                  background: 'var(--brand)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '11px 20px',
-                  borderRadius: 12,
-                  fontWeight: 700,
-                  fontSize: 13.5,
-                  cursor: inviting ? 'not-allowed' : 'pointer',
-                  opacity: inviting ? 0.7 : 1,
-                  minHeight: 44,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {inviting ? 'Sending...' : 'Send Invite'}
-              </button>
-            </form>
-
-            {inviteMsg && (
-              <div style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 600 }}>
-                {inviteMsg}
-              </div>
-            )}
-
-            {pendingRequests.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>
-                  Pending Join Requests ({pendingRequests.length})
-                </h3>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {pendingRequests.map(req => (
-                    <div
-                      key={req._id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        background: 'var(--bg)',
-                        padding: '10px 14px',
-                        borderRadius: 12,
-                        border: '1px solid var(--line)',
-                        flexWrap: 'wrap',
-                        gap: 10,
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>
-                          {req.user?.name || 'User'}
-                        </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--brand)' }}>
-                          @{req.user?.username || 'user'}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={() => handleMemberAction(req._id, 'accept')}
-                          style={{
-                            background: '#3fcf8e',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 14px',
-                            borderRadius: 8,
-                            fontWeight: 700,
-                            fontSize: 12.5,
-                            cursor: 'pointer',
-                            minHeight: 36,
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMemberAction(req._id, 'reject')}
-                          style={{
-                            background: 'transparent',
-                            color: 'var(--ink-muted)',
-                            border: '1px solid var(--line)',
-                            padding: '6px 12px',
-                            borderRadius: 8,
-                            fontWeight: 600,
-                            fontSize: 12.5,
-                            cursor: 'pointer',
-                            minHeight: 36,
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Progress Logging & History Cards ── */}
+{/* ── Progress Logging & History Cards ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 20 }}>
           {/* Progress Logger */}
           <div
+            id="progress-logger-card"
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--line)',
@@ -1949,6 +1603,698 @@ function GoalJourneyContent() {
             </div>
           </div>
         </div>
+
+
+        {/* ── Checkpoints & Rewards Grid (1 to 3 columns responsively) ── */}
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 20,
+            padding: 'clamp(18px, 3vw, 26px)',
+            marginBottom: 28,
+          }}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FiGift style={{ fontSize: 20, color: 'var(--brand)' }} />
+              <span>Checkpoints & Rewards ({numCheckpoints} Milestones)</span>
+            </h2>
+            <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
+              As you log progress towards your target, checkpoints automatically unlock and reveal your designated rewards.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 250px), 1fr))',
+              gap: 12,
+            }}
+          >
+            {checkpointsList.map(cp => (
+              <div
+                key={cp.index}
+                style={{
+                  background: cp.isReached ? 'rgba(63, 207, 142, 0.08)' : 'var(--bg)',
+                  borderRadius: 14,
+                  padding: '14px 16px',
+                  border: `1.5px solid ${cp.isReached ? '#3fcf8e' : 'var(--line)'}`,
+                  position: 'relative',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      padding: '2px 9px',
+                      borderRadius: 12,
+                      background: cp.isReached ? '#3fcf8e' : 'var(--line)',
+                      color: cp.isReached ? '#fff' : 'var(--ink-muted)',
+                    }}
+                  >
+                    Checkpoint {cp.index}
+                  </span>
+
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: cp.isReached ? '#3fcf8e' : 'var(--ink)' }}>
+                    {cp.value} {goal.unit}
+                  </span>
+                </div>
+
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 4, wordBreak: 'break-word' }}>
+                  {cp.reward}
+                </div>
+
+                <div style={{ fontSize: 11.5, color: cp.isReached ? '#3fcf8e' : 'var(--ink-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {cp.isReached ? (
+                    <>
+                      <FiCheckCircle style={{ fontSize: 13 }} />
+                      <span>Unlocked! Enjoy your reward</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiLock style={{ fontSize: 12 }} />
+                      <span>Needs {(Math.max(0, cp.value - displayProgress)).toFixed(1)} {goal.unit} more</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Collaborative Team Members ── */}
+        {goal.goalType === 'collaborative' && (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--line)',
+              borderRadius: 20,
+              padding: 'clamp(18px, 3vw, 26px)',
+              marginBottom: 28,
+            }}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FiUsers style={{ fontSize: 20, color: 'var(--brand)' }} />
+                <span>Collaborative Team Members</span>
+              </h2>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
+                All active members contribute together to reach the target of {goal.target} {goal.unit}.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+                gap: 12,
+              }}
+            >
+              {activeMembers.map(m => {
+                const u = m.user;
+                const isMe = m.auth0Id === currentUserId;
+                return (
+                  <div
+                    key={m._id}
+                    onClick={() => u?.username && openUserProfile(u.username)}
+                    style={{
+                      background: 'var(--bg)',
+                      borderRadius: 14,
+                      padding: '14px 16px',
+                      border: '1px solid var(--line)',
+                      cursor: u?.username ? 'pointer' : 'default',
+                      transition: 'border-color 0.2s',
+                    }}
+                    title={u?.username ? `View @${u.username}'s profile` : ''}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 14 }}>
+                        {u?.name || 'Member'} {isMe && '(You)'}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: 12,
+                          background: m.role === 'creator' ? 'var(--brand-soft)' : 'var(--surface)',
+                          color: m.role === 'creator' ? 'var(--brand)' : 'var(--ink-muted)',
+                        }}
+                      >
+                        {m.role}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--brand)', marginBottom: 6, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                      @{u?.username || 'member'}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>
+                      Contributed: <strong style={{ color: 'var(--ink)' }}>{m.progress} {goal.unit}</strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Creator Invites & Requests Management ── */}
+        {isCreator && goal.goalType !== 'personal' && (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--line)',
+              borderRadius: 20,
+              padding: 'clamp(18px, 3vw, 26px)',
+              marginBottom: 28,
+              display: 'grid',
+              gap: 18,
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: 'clamp(17px, 3vw, 20px)', fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FiShield style={{ fontSize: 20, color: 'var(--brand)' }} />
+                <span>Goal Admin & Member Invitations</span>
+              </h2>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginTop: 4 }}>
+                Invite users by their unique username (@username) or approve incoming join requests.
+              </p>
+            </div>
+
+            <form onSubmit={handleInviteUser} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', flex: '1 1 220px' }}>
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: 14,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--ink-muted)',
+                    fontWeight: 700,
+                  }}
+                >
+                  @
+                </span>
+                <input
+                  type="text"
+                  placeholder="Enter unique username to invite..."
+                  value={inviteUsername}
+                  onChange={e => setInviteUsername(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px 11px 34px',
+                    borderRadius: 12,
+                    border: '1.5px solid var(--line)',
+                    background: 'var(--bg)',
+                    color: 'var(--ink)',
+                    fontSize: 14,
+                    outline: 'none',
+                    minHeight: 44,
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={inviting || !inviteUsername.trim()}
+                style={{
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '11px 20px',
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: 13.5,
+                  cursor: inviting ? 'not-allowed' : 'pointer',
+                  opacity: inviting ? 0.7 : 1,
+                  minHeight: 44,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {inviting ? 'Sending...' : 'Send Invite'}
+              </button>
+            </form>
+
+            {inviteMsg && (
+              <div style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 600 }}>
+                {inviteMsg}
+              </div>
+            )}
+
+            {pendingRequests.length > 0 && (
+              <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>
+                  Pending Join Requests ({pendingRequests.length})
+                </h3>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {pendingRequests.map(req => (
+                    <div
+                      key={req._id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'var(--bg)',
+                        padding: '10px 14px',
+                        borderRadius: 12,
+                        border: '1px solid var(--line)',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>
+                          {req.user?.name || 'User'}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--brand)' }}>
+                          @{req.user?.username || 'user'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleMemberAction(req._id, 'accept')}
+                          style={{
+                            background: '#3fcf8e',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 14px',
+                            borderRadius: 8,
+                            fontWeight: 700,
+                            fontSize: 12.5,
+                            cursor: 'pointer',
+                            minHeight: 36,
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMemberAction(req._id, 'reject')}
+                          style={{
+                            background: 'transparent',
+                            color: 'var(--ink-muted)',
+                            border: '1px solid var(--line)',
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            fontWeight: 600,
+                            fontSize: 12.5,
+                            cursor: 'pointer',
+                            minHeight: 36,
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+              </div>
+
+      {/* ── Right Sidebar Column (Leaderboards & Standings) ── */}
+      <aside className="goal-sidebar-col">
+        <div className="goal-sidebar-sticky">
+          {/* ── Universal Leaderboard Card (Always on Screen) ── */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--line)',
+              borderRadius: 20,
+              padding: '20px',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 10,
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 16,
+                      boxShadow: '0 3px 12px rgba(245, 158, 11, 0.4)',
+                    }}
+                  >
+                    <FiAward />
+                  </span>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)', margin: 0 }}>
+                    Leaderboard
+                  </h3>
+                </div>
+                <p style={{ color: 'var(--ink-muted)', fontSize: 12, margin: '4px 0 0' }}>
+                  {goal.goalType === 'competitive'
+                    ? 'Live competitor rankings'
+                    : goal.goalType === 'collaborative'
+                    ? 'Team member contributions'
+                    : goal.goalType === 'open'
+                    ? 'Open community rankings'
+                    : 'Personal journey & milestones'}
+                </p>
+              </div>
+
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '3px 9px',
+                  borderRadius: 12,
+                  background: 'var(--brand-soft)',
+                  color: 'var(--brand)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: '#3fcf8e',
+                    boxShadow: '0 0 6px #3fcf8e',
+                  }}
+                />
+                {effectiveRankings.length}{' '}
+                {goal.goalType === 'competitive'
+                  ? (effectiveRankings.length === 1 ? 'Racer' : 'Racers')
+                  : goal.goalType === 'collaborative'
+                  ? (effectiveRankings.length === 1 ? 'Member' : 'Members')
+                  : goal.goalType === 'open'
+                  ? (effectiveRankings.length === 1 ? 'Participant' : 'Participants')
+                  : 'Solo Pace'}
+              </span>
+            </div>
+
+            {/* Your Standing Spotlight Card */}
+            {myRankIndex !== -1 && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.12))',
+                  border: '1.5px solid var(--brand)',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Your Standing
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 900,
+                      color: '#fff',
+                      background: 'var(--brand)',
+                      padding: '2px 8px',
+                      borderRadius: 8,
+                    }}
+                  >
+                    #{myRankIndex + 1} of {effectiveRankings.length}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)' }}>
+                    {displayProgress} <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>{goal.unit}</span>
+                  </span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand)' }}>
+                    {pct}% of target
+                  </span>
+                </div>
+
+                <p style={{ fontSize: 11.5, color: 'var(--ink-muted)', margin: 0, lineHeight: 1.4 }}>
+                  {goal.goalType === 'personal' ? (
+                    <span style={{ color: '#3fcf8e', fontWeight: 600 }}>
+                      🌟 {checkpointsList.filter(c => c.isReached).length} of {numCheckpoints} checkpoints unlocked! {Math.max(0, goal.target - displayProgress).toFixed(1)} {goal.unit} remaining.
+                    </span>
+                  ) : myRankIndex === 0 && effectiveRankings.length > 1 ? (
+                    <span style={{ color: '#ffd166', fontWeight: 700 }}>
+                      👑 You are leading in 1st place! Keep the pace!
+                    </span>
+                  ) : myRankIndex > 0 && effectiveRankings[0] ? (
+                    <span>
+                      🔥 {(effectiveRankings[0].progress - displayProgress).toFixed(1)} {goal.unit} behind #1 ({effectiveRankings[0].name})
+                    </span>
+                  ) : (
+                    <span>
+                      🎯 Log progress regularly to advance up the leaderboard!
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Top 3 Podium Highlights */}
+            {top3.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  Podium Leaders
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {top3.map((r, idx) => {
+                    const isMe = r.userId === currentUserId || (currentUsername && r.username === currentUsername) || r.memberId === 'self';
+                    const medalIcons = ['🥇', '🥈', '🥉'];
+                    return (
+                      <div
+                        key={r.memberId || idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          background: isMe ? 'var(--brand-soft)' : 'var(--bg)',
+                          border: `1px solid ${isMe ? 'var(--brand)' : 'var(--line)'}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <span style={{ fontSize: 17 }}>{medalIcons[idx] || '🎖️'}</span>
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              onClick={() => r.username && openUserProfile(r.username)}
+                              style={{
+                                fontWeight: 700,
+                                color: 'var(--ink)',
+                                fontSize: 13,
+                                cursor: r.username ? 'pointer' : 'default',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                              title={`View @${r.username}`}
+                            >
+                              {r.name} {isMe && '(You)'}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--brand)' }}>
+                              @{r.username}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink)' }}>
+                            {r.progress} {goal.unit}
+                          </div>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: r.progress >= goal.target ? '#3fcf8e' : 'var(--brand)' }}>
+                            {r.percentage}%
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* All Standings List */}
+            {effectiveRankings.length > 1 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  Full Standings ({effectiveRankings.length})
+                </div>
+
+                <div
+                  style={{
+                    maxHeight: 260,
+                    overflowY: 'auto',
+                    display: 'grid',
+                    gap: 6,
+                    paddingRight: 4,
+                  }}
+                >
+                  {effectiveRankings.map((r, idx) => {
+                    const isMe = r.userId === currentUserId || (currentUsername && r.username === currentUsername) || r.memberId === 'self';
+                    return (
+                      <div
+                        key={r.memberId || idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          background: isMe ? 'var(--brand-soft)' : 'var(--bg)',
+                          border: `1px solid ${isMe ? 'var(--brand)' : 'var(--line)'}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              color: 'var(--ink-muted)',
+                              minWidth: 20,
+                            }}
+                          >
+                            #{idx + 1}
+                          </span>
+                          <div
+                            onClick={() => r.username && openUserProfile(r.username)}
+                            style={{
+                              cursor: r.username ? 'pointer' : 'default',
+                              fontSize: 12.5,
+                              fontWeight: isMe ? 800 : 600,
+                              color: 'var(--ink)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {r.name} {isMe && '(You)'}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          {r.progress >= goal.target && (
+                            <span
+                              style={{
+                                fontSize: 9.5,
+                                fontWeight: 800,
+                                padding: '1px 5px',
+                                borderRadius: 6,
+                                background: 'rgba(63, 207, 142, 0.15)',
+                                color: '#3fcf8e',
+                              }}
+                            >
+                              Done
+                            </span>
+                          )}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>
+                            {r.progress} {goal.unit}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Fast Log button in sidebar */}
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('progress-logger-card');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              style={{
+                background: 'var(--brand)',
+                color: '#fff',
+                border: 'none',
+                padding: '11px 14px',
+                borderRadius: 12,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                width: '100%',
+                boxShadow: '0 4px 14px var(--neon-glow)',
+              }}
+            >
+              <FiPlusCircle style={{ fontSize: 16 }} />
+              <span>Record New Progress</span>
+            </button>
+          </div>
+
+          {/* ── Journey Overview & Milestone Summary Card ── */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--line)',
+              borderRadius: 20,
+              padding: '18px 20px',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FiTarget style={{ fontSize: 17, color: 'var(--brand)' }} />
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--ink)', margin: 0 }}>
+                  Journey Overview
+                </h3>
+              </div>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: isGoalCompleted ? '#3fcf8e' : 'var(--brand)',
+                  background: isGoalCompleted ? 'rgba(63, 207, 142, 0.12)' : 'var(--brand-soft)',
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                }}
+              >
+                {isGoalCompleted ? 'Completed' : isGoalUpcoming ? 'Upcoming' : isGoalEnded ? 'Ended' : 'In Progress'}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 12, border: '1px solid var(--line)' }}>
+                <div style={{ fontSize: 11, color: 'var(--ink-muted)', fontWeight: 600 }}>Unlocked</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: '#3fcf8e', marginTop: 2 }}>
+                  {checkpointsList.filter(c => c.isReached).length} / {numCheckpoints}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>Checkpoints</div>
+              </div>
+              <div style={{ background: 'var(--bg)', padding: '10px 12px', borderRadius: 12, border: '1px solid var(--line)' }}>
+                <div style={{ fontSize: 11, color: 'var(--ink-muted)', fontWeight: 600 }}>Distance Left</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--brand)', marginTop: 2 }}>
+                  {Math.max(0, goal.target - displayProgress).toFixed(1)}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>{goal.unit} remaining</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
 
         {/* Edit Log Modal */}
         <AnimatePresence>
